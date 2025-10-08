@@ -4,7 +4,6 @@ package com.vibemine.musicapp.service;
 
 import com.vibemine.musicapp.model.User;
 import com.vibemine.musicapp.repository.UserRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -13,17 +12,15 @@ import java.util.Optional;
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    // Cần thêm JwtService sau khi cấu hình Spring Security
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
     }
 
     /**
      * Thực hiện logic đăng ký người dùng mới.
-     * @param user Đối tượng User chứa thông tin đăng ký (chưa hash mật khẩu).
+     * Mật khẩu được lưu dưới dạng clear-text (KHÔNG AN TOÀN)
+     * @param user Đối tượng User chứa thông tin đăng ký.
      * @return User đã được lưu vào DB.
      * @throws RuntimeException nếu username hoặc email đã tồn tại.
      */
@@ -35,20 +32,18 @@ public class AuthService {
             throw new RuntimeException("Email đã tồn tại!");
         }
 
-        // Mã hóa mật khẩu trước khi lưu
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        // Lưu mật khẩu clear-text
         return userRepository.save(user);
     }
 
     /**
-     * Thực hiện logic đăng nhập (chỉ kiểm tra tồn tại và trả về User).
-     * Logic kiểm tra mật khẩu và tạo JWT token sẽ được xử lý trong SecurityConfig.
+     * Tìm kiếm User bằng username và kiểm tra mật khẩu (thủ công)
      * @param username Tên đăng nhập.
-     * @return User.
+     * @param password Mật khẩu clear-text.
+     * @return User đã xác thực.
      */
-    public Optional<User> findUserByUsername(String username) {
-        return userRepository.findByUsername(username);
+    public Optional<User> authenticateUser(String username, String password) {
+        return userRepository.findByUsername(username)
+            .filter(user -> user.getPassword().equals(password)); // Kiểm tra mật khẩu clear-text
     }
-
-    // TODO: Triển khai logic tạo JWT Token cho đăng nhập (sẽ cần JwtService)
 }

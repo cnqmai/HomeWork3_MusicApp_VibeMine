@@ -1,4 +1,4 @@
-// src/main/java/com/vibemine/musicapp/controller/AuthController.java
+// src/main/java/com/vibemine/musicapp/controller/AuthController.java (FINAL VERSION - Simple Auth)
 
 package com.vibemine.musicapp.controller;
 
@@ -11,19 +11,21 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// TODO: Thay thế bằng các lớp DTO thực tế
+// DTOs
 class RegisterRequest {
     public String username;
     public String email;
     public String password;
 }
+
 class LoginRequest {
     public String username;
     public String password;
 }
-class AuthResponse {
-    public String token;
-    public String username;
+
+class SimpleAuthResponse {
+    public String message;
+    public Long userId;
 }
 
 @RestController
@@ -31,7 +33,6 @@ class AuthResponse {
 public class AuthController {
 
     private final AuthService authService;
-    // TODO: Cần thêm JwtUtils để tạo token
 
     public AuthController(AuthService authService) {
         this.authService = authService;
@@ -61,26 +62,26 @@ public class AuthController {
     }
 
     /**
-     * Endpoint Đăng nhập (sẽ trả về JWT Token)
+     * Endpoint Đăng nhập (Xác thực thủ công bằng if/else để tránh lỗi kiểu)
      */
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         
-        User user = authService.findUserByUsername(loginRequest.username).orElse(null);
+        // Gọi service để xác thực và nhận lại Optional<User>
+        User user = authService.authenticateUser(loginRequest.username, loginRequest.password).orElse(null);
 
-        // TODO: Cần thêm logic kiểm tra mật khẩu đã hash khi Spring Security được cấu hình.
-        // Hiện tại, logic tìm kiếm được đơn giản hóa.
-        if (user == null /* || !passwordEncoder.matches(loginRequest.password, user.getPassword())*/) {
+        // Kiểm tra kết quả
+        if (user == null) {
+            // Đăng nhập thất bại
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Tên đăng nhập hoặc mật khẩu không đúng.");
         }
         
-        // Sau khi xác thực thành công, tạo JWT Token
-        String token = "MOCK_JWT_TOKEN"; 
-        AuthResponse response = new AuthResponse();
-        response.token = token;
-        response.username = user.getUsername();
+        // Đăng nhập thành công (Trả về ID User)
+        SimpleAuthResponse response = new SimpleAuthResponse();
+        response.message = "Đăng nhập thành công";
+        response.userId = user.getId();
         
-        // Trả về đối tượng AuthResponse (Thành công)
+        // Trả về ResponseEntity<SimpleAuthResponse>
         return ResponseEntity.ok(response);
     }
 }
