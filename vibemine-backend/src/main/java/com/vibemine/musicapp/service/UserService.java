@@ -2,20 +2,20 @@
 
 package com.vibemine.musicapp.service;
 
-import com.vibemine.musicapp.model.User;
-import com.vibemine.musicapp.model.Track;
-import com.vibemine.musicapp.model.Playlist;
-import com.vibemine.musicapp.model.ListeningHistory;
-import com.vibemine.musicapp.repository.UserRepository;
-import com.vibemine.musicapp.repository.TrackRepository;
-import com.vibemine.musicapp.repository.PlaylistRepository;
-import com.vibemine.musicapp.repository.ListeningHistoryRepository;
+import java.util.List;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
+import com.vibemine.musicapp.model.ListeningHistory;
+import com.vibemine.musicapp.model.Playlist;
+import com.vibemine.musicapp.model.Track;
+import com.vibemine.musicapp.model.User;
+import com.vibemine.musicapp.repository.ListeningHistoryRepository;
+import com.vibemine.musicapp.repository.PlaylistRepository;
+import com.vibemine.musicapp.repository.TrackRepository;
+import com.vibemine.musicapp.repository.UserRepository;
 
 @Service
 public class UserService {
@@ -140,6 +140,38 @@ public class UserService {
             .orElseThrow(() -> new RuntimeException("User không tồn tại"));
         Pageable top100 = PageRequest.of(0, 100);
         return historyRepository.findByUserOrderByListenedAtDesc(user, top100);
+    }
+
+    /**
+     * Xóa bài hát khỏi Playlist (FR-3.3)
+     */
+    public Playlist removeTrackFromPlaylist(Long userId, Long playlistId, Long trackId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+            .orElseThrow(() -> new RuntimeException("Playlist không tồn tại"));
+
+        if (!playlist.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Không có quyền chỉnh sửa Playlist này");
+        }
+
+        Track track = trackRepository.findById(trackId)
+            .orElseThrow(() -> new RuntimeException("Bài hát không tồn tại"));
+
+        playlist.getTracks().remove(track);
+        return playlistRepository.save(playlist);
+    }
+
+    /**
+     * Xóa một Playlist
+     */
+    public void deletePlaylist(Long userId, Long playlistId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+            .orElseThrow(() -> new RuntimeException("Playlist không tồn tại"));
+
+        if (!playlist.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Không có quyền xóa Playlist này");
+        }
+
+        playlistRepository.delete(playlist);
     }
 
     // TODO: Triển khai logic gợi ý phức tạp (FR-8.1), dựa trên lịch sử nghe (ví dụ: gợi ý nghệ sĩ/thể loại tương tự)

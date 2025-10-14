@@ -2,15 +2,23 @@
 
 package com.vibemine.musicapp.controller;
 
-import com.vibemine.musicapp.model.Track;
-import com.vibemine.musicapp.model.Playlist;
-import com.vibemine.musicapp.model.ListeningHistory;
-import com.vibemine.musicapp.service.UserService;
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.vibemine.musicapp.model.ListeningHistory;
+import com.vibemine.musicapp.model.Playlist;
+import com.vibemine.musicapp.model.Track;
+import com.vibemine.musicapp.service.UserService;
 
 @RestController
 @RequestMapping("/api/user")
@@ -99,5 +107,38 @@ public class UserController {
     @GetMapping("/{userId}/history")
     public List<ListeningHistory> getListeningHistory(@PathVariable Long userId) {
         return userService.getListeningHistory(userId);
+    }
+
+    /**
+     * Xóa bài hát khỏi Playlist (FR-3.3)
+     */
+    @DeleteMapping("/{userId}/playlists/{playlistId}/remove/{trackId}")
+    public ResponseEntity<Playlist> removeTrackFromPlaylist(
+        @PathVariable Long userId,
+        @PathVariable Long playlistId,
+        @PathVariable Long trackId
+    ) {
+        try {
+            Playlist updatedPlaylist = userService.removeTrackFromPlaylist(userId, playlistId, trackId);
+            return ResponseEntity.ok(updatedPlaylist);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
+
+    /**
+     * Xóa một Playlist
+     */
+    @DeleteMapping("/{userId}/playlists/{playlistId}")
+    public ResponseEntity<String> deletePlaylist(
+        @PathVariable Long userId,
+        @PathVariable Long playlistId
+    ) {
+        try {
+            userService.deletePlaylist(userId, playlistId);
+            return ResponseEntity.ok("Xóa playlist thành công.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 }
