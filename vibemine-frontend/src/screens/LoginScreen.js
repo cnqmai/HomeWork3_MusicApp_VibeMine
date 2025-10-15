@@ -3,9 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'reac
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
 
-// !! QUAN TRỌNG: Thay thế địa chỉ IP này bằng địa chỉ IP của máy tính đang chạy backend.
-// Không dùng "localhost" vì máy ảo/điện thoại không hiểu.
-const API_URL = 'http://192.168.50.147:8080'; // Ví dụ: 'http://192.168.1.10:8080'
+const API_URL = 'http://192.168.50.147:8080'; // Giữ nguyên IP bạn đã cấu hình
 
 export default function LoginScreen({ navigation }) {
     const [username, setUsername] = useState('');
@@ -13,6 +11,9 @@ export default function LoginScreen({ navigation }) {
     const { login } = useContext(AuthContext);
 
     const handleLogin = async () => {
+        // --- LOG 1: KIỂM TRA DỮ LIỆU TRƯỚC KHI GỬI ---
+        console.log(`Đang thử đăng nhập với: Username=${username}, Password=${password}`);
+
         if (!username || !password) {
             Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.');
             return;
@@ -23,19 +24,36 @@ export default function LoginScreen({ navigation }) {
                 username: username,
                 password: password,
             });
+            
+            // --- LOG 2: KIỂM TRA KẾT QUẢ TRẢ VỀ KHI THÀNH CÔNG ---
+            console.log('Đăng nhập thành công! Phản hồi từ server:', JSON.stringify(response.data, null, 2));
 
             if (response.status === 200) {
                 const { userId } = response.data;
-                // Gọi hàm login từ context để lưu token và userId
-                // Tạm thời dùng 'dummy-token' vì backend chưa có JWT
-                login('dummy-token', userId); 
+                login('dummy-token', userId);
             }
         } catch (error) {
-            console.error(error);
-            Alert.alert('Đăng nhập thất bại', 'Tên đăng nhập hoặc mật khẩu không đúng.');
+            // --- LOG 3: KIỂM TRA CHI TIẾT LỖI KHI THẤT BẠI ---
+            if (error.response) {
+                // Lỗi từ phía server (ví dụ: 401, 404, 500)
+                console.error('Lỗi phản hồi từ server:', JSON.stringify(error.response.data, null, 2));
+                console.error('Mã trạng thái:', error.response.status);
+            } else if (error.request) {
+                // Yêu cầu đã được gửi đi nhưng không nhận được phản hồi (ví dụ: sai IP, backend không chạy)
+                console.error('Không nhận được phản hồi từ server. Yêu cầu:', error.request);
+                Alert.alert('Lỗi kết nối', 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại địa chỉ IP và đảm bảo backend đang chạy.');
+            } else {
+                // Lỗi xảy ra khi thiết lập yêu cầu
+                console.error('Lỗi khi thiết lập yêu cầu:', error.message);
+            }
+            
+            if (!error.request) { // Chỉ hiện alert này nếu không phải lỗi kết nối
+                Alert.alert('Đăng nhập thất bại', 'Tên đăng nhập hoặc mật khẩu không đúng.');
+            }
         }
     };
 
+    // Phần JSX (giao diện) giữ nguyên...
     return (
         <View style={styles.container}>
             <Text style={styles.logo}>VibeMine</Text>
@@ -80,6 +98,7 @@ export default function LoginScreen({ navigation }) {
     );
 }
 
+// Phần styles giữ nguyên...
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -111,7 +130,7 @@ const styles = StyleSheet.create({
     button: {
         width: '100%',
         height: 50,
-        backgroundColor: '#66DDAA', // Màu xanh mint
+        backgroundColor: '#66DDAA',
         borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',

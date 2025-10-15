@@ -19,10 +19,6 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    /**
-     * Thực hiện logic đăng ký người dùng mới.
-     * Mật khẩu bây giờ sẽ được mã hóa.
-     */
     public User registerUser(User user) {
         if (userRepository.existsByUsername(user.getUsername())) {
             throw new RuntimeException("Username đã tồn tại!");
@@ -30,17 +26,35 @@ public class AuthService {
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new RuntimeException("Email đã tồn tại!");
         }
-
-        // Mã hóa mật khẩu trước khi lưu
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
-    /**
-     * Tìm kiếm User bằng username và kiểm tra mật khẩu đã được mã hóa.
-     */
     public Optional<User> authenticateUser(String username, String password) {
-        return userRepository.findByUsername(username)
-            .filter(user -> passwordEncoder.matches(password, user.getPassword()));
+        System.out.println("\n--- BẮT ĐẦU XÁC THỰC ---");
+        System.out.println("Username nhận được từ request: " + username);
+        System.out.println("Password nhận được từ request: " + password);
+
+        Optional<User> userOptional = userRepository.findByUsername(username);
+
+        if (userOptional.isEmpty()) {
+            System.out.println("[KẾT QUẢ]: Lỗi - Không tìm thấy user nào có username là '" + username + "' trong database.");
+            System.out.println("--- KẾT THÚC XÁC THỰC ---\n");
+            return Optional.empty();
+        }
+
+        User user = userOptional.get();
+        String storedPasswordHash = user.getPassword();
+        System.out.println("Mật khẩu đã mã hóa trong DB của user '" + username + "': " + storedPasswordHash);
+
+        boolean passwordsMatch = passwordEncoder.matches(password, storedPasswordHash);
+        System.out.println("So sánh '" + password + "' với hash ở trên... Kết quả: " + passwordsMatch);
+        System.out.println("--- KẾT THÚC XÁC THỰC ---\n");
+
+        if (passwordsMatch) {
+            return userOptional;
+        } else {
+            return Optional.empty();
+        }
     }
 }
