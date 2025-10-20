@@ -3,9 +3,17 @@ import axios from 'axios';
 // !! QUAN TRỌNG: Thay thế địa chỉ IP này bằng địa chỉ IP của máy tính đang chạy backend.
 // Ví dụ: 'http://192.168.1.10:8080'
 // Để tìm IP, mở Command Prompt/Terminal và gõ "ipconfig" (Windows) hoặc "ifconfig" (macOS).
-const API_URL = 'http://YOUR_COMPUTER_IP_ADDRESS:8080'; 
+const API_URL = 'http://172.20.10.2:8080'; 
+
+// Set a sensible default timeout for all requests (ms)
+axios.defaults.timeout = 10000; // 10 seconds
 
 const ApiService = {
+  // --- HEALTH / DEBUG ---
+  ping: () => {
+    return axios.get(`${API_URL}/api/auth/ping`);
+  },
+
   // --- AUTH ---
   login: (username, password) => {
     return axios.post(`${API_URL}/api/auth/login`, { username, password });

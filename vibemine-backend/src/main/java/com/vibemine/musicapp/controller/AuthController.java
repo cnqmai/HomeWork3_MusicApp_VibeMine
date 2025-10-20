@@ -2,14 +2,17 @@
 
 package com.vibemine.musicapp.controller;
 
-import com.vibemine.musicapp.model.User;
-import com.vibemine.musicapp.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.vibemine.musicapp.model.User;
+import com.vibemine.musicapp.service.AuthService;
 
 // DTOs
 class RegisterRequest {
@@ -30,6 +33,7 @@ class SimpleAuthResponse {
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = "*") // allow all origins for quick local testing
 public class AuthController {
 
     private final AuthService authService;
@@ -61,12 +65,21 @@ public class AuthController {
         }
     }
 
+    // --- ADDED: simple ping endpoint for connectivity testing ---
+    @GetMapping("/ping")
+    public ResponseEntity<String> ping() {
+        System.out.println("[PING] Received ping request");
+        return ResponseEntity.ok("pong");
+    }
+
     /**
      * Endpoint Đăng nhập (Xác thực thủ công bằng if/else để tránh lỗi kiểu)
      */
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        
+        // --- ADDED: quick log to show request reached controller ---
+        System.out.println("[LOGIN] Received login request for username: " + loginRequest.username);
+
         // Gọi service để xác thực và nhận lại Optional<User>
         User user = authService.authenticateUser(loginRequest.username, loginRequest.password).orElse(null);
 

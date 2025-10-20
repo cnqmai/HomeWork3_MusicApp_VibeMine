@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
-    View, Text, StyleSheet, SafeAreaView, ScrollView, TextInput,
+    View, Text, StyleSheet, ScrollView, TextInput,
     Image, FlatList, TouchableOpacity, ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../api/ApiService';
 import { PlayerContext } from '../context/PlayerContext';
+import { LinearGradient } from 'expo-linear-gradient'; // Import LinearGradient
+import { SafeAreaView } from "react-native-safe-area-context";
 
-// --- Placeholder Data for UI (chỉ giữ lại Genres) ---
-const genresData = [
-    { id: '1', name: 'Pop Hits', color: '#8A2BE2' },
-    { id: '2', name: 'Rock Anthems', color: '#DC143C' },
-    { id: '3', name: 'Hip Hop Beats', color: '#2E8B57' },
-    { id: '4', name: 'Electronic Vibes', color: '#1E90FF' },
+// --- Dữ liệu giả cho các mục chưa có API ---
+const GENRE_CATEGORIES = [
+    { id: '1', name: 'Pop Hits', colors: ['#8A2BE2', '#4B0082'] },
+    { id: '2', name: 'Rock Anthems', colors: ['#DC143C', '#8B0000'] },
+    { id: '3', name: 'Hip Hop Beats', colors: ['#2E8B57', '#006400'] },
+    { id: '4', name: 'Electronic', colors: ['#1E90FF', '#00008B'] },
 ];
 
-// --- Functional Components for Sections ---
+// --- Component con ---
 const SectionHeader = ({ title }) => <Text style={styles.sectionTitle}>{title}</Text>;
 
 const RecommendationItem = ({ track, onPress }) => {
@@ -33,7 +35,7 @@ const RecommendationItem = ({ track, onPress }) => {
 };
 
 export default function HomeScreen({ navigation }) {
-    const [recommendations, setRecommendations] = useState([]);
+    const [tracks, setTracks] = useState([]);
     const [albums, setAlbums] = useState([]);
     const [artists, setArtists] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -42,13 +44,12 @@ export default function HomeScreen({ navigation }) {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Gọi tất cả API cùng lúc để tăng tốc độ tải
                 const [tracksRes, albumsRes, artistsRes] = await Promise.all([
                     ApiService.getAllTracks(),
                     ApiService.getAllAlbums(),
                     ApiService.getAllArtists(),
                 ]);
-                setRecommendations(tracksRes.data);
+                setTracks(tracksRes.data);
                 setAlbums(albumsRes.data);
                 setArtists(artistsRes.data);
             } catch (error) {
@@ -90,11 +91,11 @@ export default function HomeScreen({ navigation }) {
                     <TextInput placeholder="Search songs or artists..." style={styles.searchBar} />
                 </View>
 
-                {/* Trending Music - Tạm thời vẫn dùng recommendtions */}
+                {/* Trending Music */}
                 <SectionHeader title="Trending Music" />
                 <FlatList
                     horizontal
-                    data={recommendations.filter(t => t.isTrending).slice(0, 4)} // Lấy 4 bài trending
+                    data={tracks.filter(t => t.isTrending).slice(0, 5)}
                     renderItem={({ item }) => (
                         <TouchableOpacity style={styles.trendingCard} onPress={() => handleTrackPress(item)}>
                             <Image source={{ uri: item.coverArtUrl }} style={styles.trendingImage} />
@@ -107,19 +108,19 @@ export default function HomeScreen({ navigation }) {
                     contentContainerStyle={{ paddingLeft: 15 }}
                 />
 
-                {/* Your Recommendations Section */}
+                {/* Your Recommendations */}
                 <SectionHeader title="Your Recommendations" />
-                {recommendations.slice(0, 5).map(item => (
+                {tracks.slice(0, 4).map(item => (
                     <RecommendationItem key={item.id} track={item} onPress={() => handleTrackPress(item)} />
                 ))}
 
-                {/* Browse Albums Section - Dùng dữ liệu thật */}
+                {/* Browse Albums */}
                 <SectionHeader title="Browse Albums" />
-                 <FlatList
+                <FlatList
                     horizontal
                     data={albums}
                     renderItem={({ item }) => (
-                         <TouchableOpacity style={styles.albumCard}>
+                        <TouchableOpacity style={styles.albumCard}>
                             <Image source={{ uri: item.coverArtUrl }} style={styles.albumImage} />
                             <Text style={styles.albumTitle} numberOfLines={1}>{item.title}</Text>
                         </TouchableOpacity>
@@ -129,38 +130,41 @@ export default function HomeScreen({ navigation }) {
                     contentContainerStyle={{ paddingLeft: 15 }}
                 />
                 
-                {/* Top Artists Section - Dùng dữ liệu thật */}
+                {/* Top Artists */}
                 <SectionHeader title="Top Artists" />
                 <FlatList
                     horizontal
                     data={artists}
                     renderItem={({ item }) => (
-                         <TouchableOpacity style={styles.artistCircle}>
+                        <TouchableOpacity style={styles.artistCircle}>
                             <Image source={{ uri: item.avatarUrl }} style={styles.artistImage} />
                             <Text style={styles.artistName}>{item.name}</Text>
                         </TouchableOpacity>
                     )}
                     keyExtractor={item => item.id.toString()}
                     showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingLeft: 15 }}
+                    contentContainerStyle={{ paddingLeft: 15, paddingVertical: 10 }}
                 />
                 
-                {/* Explore Genres Section */}
+                {/* Explore Genres */}
                 <SectionHeader title="Explore Genres" />
                 <View style={styles.genreContainer}>
-                    {genresData.map(item => (
-                        <TouchableOpacity key={item.id} style={[styles.genreCard, { backgroundColor: item.color }]}>
-                            <Text style={styles.genreText}>{item.name}</Text>
+                    {GENRE_CATEGORIES.map(item => (
+                        <TouchableOpacity key={item.id}>
+                            <LinearGradient
+                                colors={item.colors}
+                                style={styles.genreCard}
+                            >
+                                <Text style={styles.genreText}>{item.name}</Text>
+                            </LinearGradient>
                         </TouchableOpacity>
                     ))}
                 </View>
-
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-// --- Styles ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8f8f8' },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -193,8 +197,8 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         marginLeft: 15,
-        marginTop: 15,
-        marginBottom: 10,
+        marginTop: 20,
+        marginBottom: 15,
     },
     trendingCard: { marginRight: 15, width: 150 },
     trendingImage: { width: 150, height: 150, borderRadius: 10 },
@@ -212,7 +216,7 @@ const styles = StyleSheet.create({
     recommendationArtist: { fontSize: 14, color: '#888' },
     albumCard: { marginRight: 15, width: 160 },
     albumImage: { width: 160, height: 160, borderRadius: 10 },
-    albumTitle: { fontWeight: 'bold', fontSize: 16, marginTop: 5 },
+    albumTitle: { fontWeight: 'bold', fontSize: 16, marginTop: 5, paddingHorizontal: 5 },
     artistCircle: { alignItems: 'center', marginRight: 20 },
     artistImage: { width: 80, height: 80, borderRadius: 40 },
     artistName: { marginTop: 5, fontSize: 14 },
@@ -221,14 +225,15 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         paddingHorizontal: 15,
+        marginBottom: 20,
     },
     genreCard: {
-        width: '48%',
+        width: 160, // Chiều rộng cố định cho 2 cột
         height: 80,
         borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 10,
+        marginBottom: 15,
     },
     genreText: {
         color: 'white',

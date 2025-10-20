@@ -12,6 +12,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/api/**") // Áp dụng cho tất cả các đường dẫn bắt đầu bằng /api/
                 .allowedOrigins("*") // SỬA LỖI: Cho phép tất cả các nguồn gốc
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Các phương thức cho phép
-                .allowedHeaders("*"); // Cho phép tất cả các header
+                .allowedHeaders("*")
+                .allowCredentials(false); // Thêm dòng này để đảm bảo không gửi cookie/session
     }
 }

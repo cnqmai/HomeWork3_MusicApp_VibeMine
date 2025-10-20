@@ -2,8 +2,9 @@ import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const API_URL = 'http://192.168.50.147:8080'; // Giữ nguyên IP bạn đã cấu hình
+const API_URL = 'http://172.20.10.2:8080'; // Giữ nguyên IP bạn đã cấu hình
 
 export default function LoginScreen({ navigation }) {
     const [username, setUsername] = useState('');
@@ -20,10 +21,16 @@ export default function LoginScreen({ navigation }) {
         }
 
         try {
-            const response = await axios.post(`${API_URL}/api/auth/login`, {
-                username: username,
-                password: password,
-            });
+            const response = await axios.post(
+                `${API_URL}/api/auth/login`,
+                {
+                    username: username,
+                    password: password,
+                },
+                {
+                    timeout: 7000, // 7 seconds timeout
+                }
+            );
             
             // --- LOG 2: KIỂM TRA KẾT QUẢ TRẢ VỀ KHI THÀNH CÔNG ---
             console.log('Đăng nhập thành công! Phản hồi từ server:', JSON.stringify(response.data, null, 2));
@@ -41,7 +48,11 @@ export default function LoginScreen({ navigation }) {
             } else if (error.request) {
                 // Yêu cầu đã được gửi đi nhưng không nhận được phản hồi (ví dụ: sai IP, backend không chạy)
                 console.error('Không nhận được phản hồi từ server. Yêu cầu:', error.request);
-                Alert.alert('Lỗi kết nối', 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại địa chỉ IP và đảm bảo backend đang chạy.');
+                if (error.code === 'ECONNABORTED') {
+                    Alert.alert('Lỗi kết nối', 'Yêu cầu đăng nhập đã hết thời gian chờ. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.');
+                } else {
+                    Alert.alert('Lỗi kết nối', 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại địa chỉ IP và đảm bảo backend đang chạy.');
+                }
             } else {
                 // Lỗi xảy ra khi thiết lập yêu cầu
                 console.error('Lỗi khi thiết lập yêu cầu:', error.message);

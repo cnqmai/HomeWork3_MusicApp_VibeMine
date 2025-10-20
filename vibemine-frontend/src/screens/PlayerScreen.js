@@ -1,111 +1,213 @@
-import React, { useContext } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Image, TouchableOpacity } from 'react-native';
-import { PlayerContext } from '../context/PlayerContext';
-// Bạn sẽ cần cài đặt thư viện icon, ví dụ: @expo/vector-icons
-// import { Ionicons } from '@expo/vector-icons'; 
+import React, { useEffect, useCallback, useState, useContext } from 'react';
+import { 
+    View, 
+    Text, 
+    StyleSheet, 
+    Image,
+    TouchableOpacity,
+    Alert, 
+    ActivityIndicator, 
+} from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider'; 
+import { PlayerContext } from '../context/PlayerContext'; // Import PlayerContext
+import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function PlayerScreen({ navigation }) {
-    const { currentTrack, isPlaying, onPlayPausePress } = useContext(PlayerContext);
+// --- Hardcode màu sắc nếu chưa có file constants ---
+const BRAND_COLORS = {
+    PRIMARY_GREEN: "#bde1a0",
+    BACKGROUND: "#FFFFFF",
+    TEXT_DARK: "#333333",
+    TEXT_LIGHT: "#666666",
+    CONTROL_BG: '#E8F6F1',
+};
 
+// Hàm chuyển đổi mili giây sang định dạng MM:SS
+const formatTime = (milliseconds) => {
+    if (isNaN(milliseconds) || milliseconds <= 0) return '0:00';
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+};
+
+
+export default function PlayerScreen({ route, navigation }) {
+    const { 
+        currentTrack, 
+        isPlaying, 
+        onPlayPausePress, 
+        sound, // Lấy sound object từ context
+        status, // Lấy status từ context
+        playTrack, // Lấy hàm playTrack để load lại
+    } = useContext(PlayerContext);
+    
+    // State cục bộ của màn hình
+    const [isSliderSeeking, setIsSliderSeeking] = useState(false); 
+    const [isShuffle, setIsShuffle] = useState(true); 
+    const [repeatMode, setRepeatMode] = useState(1); 
+
+    // Thoát sớm nếu không có bài hát
     if (!currentTrack) {
-        // Nếu không có bài hát nào được chọn, hiển thị thông báo
         return (
-            <SafeAreaView style={styles.container}>
-                <Text>Chưa có bài hát nào được chọn.</Text>
+            <SafeAreaView style={styles.safeArea}>
+                <View style={[styles.container, { justifyContent: 'center' }]}>
+                    <Text style={{ color: BRAND_COLORS.TEXT_DARK, fontSize: 18 }}>
+                        Không có bài hát nào đang phát.
+                    </Text>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={{marginTop: 20}}>
+                        <Text style={{color: BRAND_COLORS.PRIMARY_GREEN, fontSize: 16}}>Quay lại</Text>
+                    </TouchableOpacity>
+                </View>
             </SafeAreaView>
         );
     }
     
-    // Lấy tên các nghệ sĩ
-    const artists = currentTrack.artists.map(artist => artist.name).join(', ');
+    const ARTIST_NAME = currentTrack.artists.map(a => a.name).join(", ");
+    
+    const isLoaded = status?.isLoaded ?? false;
+    const safeStatus = status || {}; 
 
+    const positionMillis = isLoaded ? safeStatus.positionMillis ?? 0 : 0;
+    const durationMillis = isLoaded ? safeStatus.durationMillis ?? 0 : 0;
+
+    const togglePlayback = async () => {
+        if (!sound || !isLoaded) return;
+        onPlayPausePress(); // Gọi hàm từ context
+    };
+    
+    const handleSlidingStart = () => setIsSliderSeeking(true);
+    
+    const handleSlidingComplete = async (value) => {
+        if (!sound || !isLoaded) return;
+        setIsSliderSeeking(false);
+        await sound.setPositionAsync(value);
+        if (!isPlaying) {
+             await sound.playAsync();
+        }
+    };
+    
     return (
-        <SafeAreaView style={styles.container}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                {/* Thay thế bằng Icon */}
-                <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.container}>
+                <View style={headerStyles.container}>
+                    <TouchableOpacity onPress={() => navigation.goBack()}> 
+                        <Ionicons name="chevron-back" size={30} color={BRAND_COLORS.PRIMARY_GREEN} />
+                    </TouchableOpacity>
+                    <Text style={headerStyles.title}>Now Playing</Text>
+                    <View style={{ width: 20 }} /> 
+                </View>
 
-            <Image source={{ uri: currentTrack.coverArtUrl }} style={styles.coverImage} />
-            
-            <Text style={styles.title}>{currentTrack.title}</Text>
-            <Text style={styles.artist}>{artists}</Text>
-            
-            {/* Thanh tiến trình sẽ được thêm sau */}
-            
-            <View style={styles.controlsContainer}>
-                {/* Nút Previous */}
-                <TouchableOpacity>
-                    <Text style={styles.controlText}>PREV</Text>
-                </TouchableOpacity>
+                <View style={styles.coverContainer}>
+                    <Image 
+                        source={{ uri: currentTrack.coverArtUrl }} 
+                        style={styles.coverImage} 
+                        resizeMode="cover"
+                    />
+                </View>
+
+                <View style={styles.trackInfo}>
+                    <Text style={styles.trackTitle}>{currentTrack.title}</Text> 
+                    <Text style={styles.trackArtist}>{ARTIST_NAME}</Text> 
+                    <Text style={styles.trackAlbum}>{currentTrack.album ? currentTrack.album.title : 'Single'}</Text> 
+                </View>
                 
-                {/* Nút Play/Pause */}
-                <TouchableOpacity style={styles.playButton} onPress={onPlayPausePress}>
-                    <Text style={styles.playButtonText}>{isPlaying ? 'PAUSE' : 'PLAY'}</Text>
-                </TouchableOpacity>
+                <View style={styles.progressContainer}>
+                    <Text style={styles.timeText}>{formatTime(positionMillis)}</Text> 
+                    <Slider
+                        style={styles.slider}
+                        minimumValue={0}
+                        maximumValue={durationMillis > 0 ? durationMillis : 1} 
+                        value={positionMillis} 
+                        minimumTrackTintColor={BRAND_COLORS.PRIMARY_GREEN} 
+                        maximumTrackTintColor={BRAND_COLORS.TEXT_LIGHT}
+                        thumbTintColor={BRAND_COLORS.PRIMARY_GREEN}
+                        onSlidingStart={handleSlidingStart}
+                        onSlidingComplete={handleSlidingComplete}
+                    />
+                    <Text style={styles.timeText}>{formatTime(durationMillis)}</Text> 
+                </View>
 
-                {/* Nút Next */}
-                <TouchableOpacity>
-                    <Text style={styles.controlText}>NEXT</Text>
+                <View style={mainControlStyles.container}>
+                    <TouchableOpacity style={mainControlStyles.button} onPress={() => alert('Chức năng chưa được phát triển')}> 
+                        <Ionicons name="play-skip-back" size={35} color={BRAND_COLORS.PRIMARY_GREEN} />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        style={mainControlStyles.playPauseButton}
+                        onPress={togglePlayback}
+                        disabled={!isLoaded}
+                    >
+                        <Ionicons 
+                            name={isPlaying ? "pause" : "play"} 
+                            size={40} 
+                            color={BRAND_COLORS.PRIMARY_GREEN} 
+                            style={mainControlStyles.playPauseIcon}
+                        />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity style={mainControlStyles.button} onPress={() => alert('Chức năng chưa được phát triển')}>
+                        <Ionicons name="play-skip-forward" size={35} color={BRAND_COLORS.PRIMARY_GREEN} />
+                    </TouchableOpacity>
+                </View>
+                
+                <View style={secondaryControlStyles.container}>
+                    <TouchableOpacity onPress={() => setIsShuffle(!isShuffle)}>
+                        <MaterialCommunityIcons 
+                            name="shuffle" 
+                            size={30} 
+                            color={isShuffle ? BRAND_COLORS.PRIMARY_GREEN : BRAND_COLORS.TEXT_LIGHT}
+                        />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => setRepeatMode(prev => (prev + 1) % 3)} style={secondaryControlStyles.repeatButton}>
+                        <MaterialCommunityIcons 
+                            name={repeatMode === 2 ? "repeat-once" : "repeat"} 
+                            size={30} 
+                            color={repeatMode !== 0 ? BRAND_COLORS.PRIMARY_GREEN : BRAND_COLORS.TEXT_LIGHT}
+                        />
+                        {repeatMode === 1 && <View style={secondaryControlStyles.repeatDot} />}
+                    </TouchableOpacity>
+                </View>
+                
+                <TouchableOpacity style={styles.lyricsButton}>
+                    <Text style={styles.lyricsText}>Lyrics</Text>
+                    <Ionicons name="chevron-down" size={18} color={BRAND_COLORS.TEXT_LIGHT} />
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
     );
 }
 
+// Styles giữ nguyên như file .tsx
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-        alignItems: 'center',
-    },
-    backButton: {
-        position: 'absolute',
-        top: 50,
-        left: 20,
-    },
-    backButtonText: {
-        fontSize: 18,
-        color: '#66DDAA',
-    },
-    coverImage: {
-        width: '80%',
-        aspectRatio: 1, // Để ảnh vuông
-        borderRadius: 20,
-        marginTop: 100,
-        marginBottom: 40,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-    },
-    artist: {
-        fontSize: 18,
-        color: '#888',
-        marginTop: 5,
-    },
-    controlsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        width: '70%',
-        marginTop: 50,
-    },
-    playButton: {
-        width: 70,
-        height: 70,
-        backgroundColor: '#66DDAA',
-        borderRadius: 35,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    playButtonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold'
-    },
-    controlText: {
-        fontSize: 18,
-        fontWeight: 'bold'
-    }
+    safeArea: { flex: 1, backgroundColor: BRAND_COLORS.BACKGROUND },
+    container: { flex: 1, alignItems: 'center', paddingHorizontal: 20 },
+    coverContainer: { width: '90%', aspectRatio: 1, paddingBottom: 20, paddingTop: 5 },
+    coverImage: { width: '100%', height: '100%', borderRadius: 20 },
+    trackInfo: { alignItems: 'center', marginTop: 10, marginBottom: 20 },
+    trackTitle: { fontSize: 24, fontWeight: 'bold', color: BRAND_COLORS.TEXT_DARK, marginBottom: 4 },
+    trackArtist: { fontSize: 16, color: BRAND_COLORS.TEXT_DARK, marginBottom: 4 },
+    trackAlbum: { fontSize: 14, color: BRAND_COLORS.TEXT_LIGHT },
+    progressContainer: { flexDirection: 'row', alignItems: 'center', width: '100%', paddingHorizontal: 5, marginBottom: 20 },
+    timeText: { fontSize: 12, color: BRAND_COLORS.TEXT_LIGHT, width: 35, textAlign: 'center' },
+    slider: { flex: 1, height: 40, marginHorizontal: 10 },
+    lyricsButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: BRAND_COLORS.CONTROL_BG, borderRadius: 25, paddingHorizontal: 20, paddingVertical: 10, marginTop: 30, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+    lyricsText: { fontSize: 16, fontWeight: '600', color: BRAND_COLORS.TEXT_DARK, marginRight: 5 }
+});
+const headerStyles = StyleSheet.create({
+    container: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingVertical: 15 },
+    title: { fontSize: 18, fontWeight: 'bold', color: BRAND_COLORS.PRIMARY_GREEN },
+});
+const mainControlStyles = StyleSheet.create({
+    container: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%', marginBottom: 30 },
+    button: { padding: 20 },
+    playPauseButton: { width: 80, height: 80, borderRadius: 40, backgroundColor: BRAND_COLORS.CONTROL_BG, justifyContent: 'center', alignItems: 'center', marginHorizontal: 25, borderWidth: 2, borderColor: BRAND_COLORS.PRIMARY_GREEN, },
+    playPauseIcon: { marginLeft: 4 },
+});
+const secondaryControlStyles = StyleSheet.create({
+    container: { flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center', },
+    repeatButton: { paddingHorizontal: 5, position: 'relative', marginLeft: 30 },
+    repeatDot: { position: 'absolute', top: 14, right: 17, width: 5, height: 5, borderRadius: 2.5, backgroundColor: BRAND_COLORS.PRIMARY_GREEN }
 });

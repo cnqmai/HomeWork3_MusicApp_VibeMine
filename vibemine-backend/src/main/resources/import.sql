@@ -1,6 +1,3 @@
--- Xóa dữ liệu cũ để tránh trùng lặp
-TRUNCATE TABLE app_user, artist, album, track, playlist, playlist_tracks, user_favorites, track_artists RESTART IDENTITY CASCADE;
-
 -- Dữ liệu mẫu cho bảng app_user
 INSERT INTO app_user (id, username, email, password, role) VALUES
 (1, 'maicnq', 'cnqmai@gmail.com', '$2a$10$8.UnVuG9HHgffUDAlk8qfeclM3eW5bL7GS6uVME/incQOMZgpEcL2', 'USER');
@@ -9,7 +6,7 @@ INSERT INTO app_user (id, username, email, password, role) VALUES
 INSERT INTO artist (id, name, bio, avatar_url) VALUES
 (1, 'Vũ', 'Thái Vũ, được biết đến với nghệ danh Vũ, là một ca sĩ-nhạc sĩ người Việt Nam.', 'https://sidoni.net/uploads/file/2020/thang7/24/tieu-su-hoang-thai-vu-tung-tot-nghiep-hoc-vien-khoa-hoc-quan-su-1.jpg'),
 (2, 'AMEE', 'Trần Huyền My, thường được biết đến với nghệ danh AMEE, là một nữ ca sĩ và diễn viên người Việt Nam.', 'https://vov2.vov.vn/sites/default/files/styles/large/public/2022-02/amee_tmcgya-11.jpg'),
-(3, 'Low G', 'Nguyễn Hoàng Long, rapname Low G, là một rapper tài năng của giới Underground.', 'https://scontent.fsgn5-5.fna.fbcdn.net/v/t39.30808-6/515922314_10093231147381035_4988806847360037151_n.jpg?_nc_cat=1&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeFSQRyUUJz8kBtKA8RlteMHTe4R6ELNRL1N7hHoQs1EvSWhVu5wfjMj9MjV8mOxlhImv8Gjd3sEuj8BijbozcTQ&_nc_ohc=mM62dPJCd60Q7kNvwFHMhyI&_nc_oc=Adk_udcoHQ70oPS6-uj18TXYL0CgiopxG9okEYJWkJvgVgKqQKW4l8nDq4kbCkZeCRc&_nc_zt=23&_nc_ht=scontent.fsgn5-5.fna&_nc_gid=aGaAjZtdaYG9j3OJgp4q-Q&oh=00_AfcQeRqzlKgccO2N6nZTc2b2WkNLhvGlRLqCv6NgiN2Pcw&oe=68F3E654'),
+(3, 'Low G', 'Nguyễn Hoàng Long, rapname Low G, là một rapper tài năng của giới Underground.', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNXVCiQmayyJQzh49SVH_6sODZttEtgcvlUw&s'),
 (4, 'Anh Trai Say Hi', 'Các nghệ sĩ từ chương trình Anh Trai Say Hi.', 'https://upload.wikimedia.org/wikipedia/vi/thumb/7/7e/AnhTraiSayHiOpening.jpg/500px-AnhTraiSayHiOpening.jpg'),
 (5, 'tlinh', 'Nguyễn Thảo Linh, nghệ danh tlinh, là một nữ rapper và ca sĩ đa tài của làng nhạc Việt.', 'https://vcdn1-giaitri.vnecdn.net/2024/06/14/Tlinh-1-jpeg-9338-1718340500.jpg?w=460&h=0&q=100&dpr=2&fit=crop&s=Vu-qyWxFvoZWJjKyaCmogQ');
 
