@@ -2,9 +2,10 @@ package com.vibemine.musicapp.service;
 
 import com.vibemine.musicapp.dto.*;
 import com.vibemine.musicapp.model.Track;
-import com.vibemine.musicapp.model.Artist; // --- SỬA LỖI: Thêm import này ---
+import com.vibemine.musicapp.model.Artist;
 import com.vibemine.musicapp.repository.TrackRepository;
-import lombok.RequiredArgsConstructor;
+// Bỏ import lombok.RequiredArgsConstructor; nếu bạn xóa chú thích đó
+import org.springframework.context.annotation.Lazy; // Thêm import này
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -17,12 +18,23 @@ import java.util.stream.Collectors;
 import java.util.NoSuchElementException;
 
 @Service
-@RequiredArgsConstructor
+// @RequiredArgsConstructor // Tạm thời bỏ chú thích này
 public class TrackService {
     private final TrackRepository trackRepository;
     private final AlbumService albumService;
     private final ArtistService artistService;
-    private final PlayHistoryService playHistoryService; // Inject HistoryService
+    private final PlayHistoryService playHistoryService; // Dependency gây vòng tròn mới
+
+    // Sử dụng Constructor Injection với @Lazy cho AlbumService và PlayHistoryService
+    public TrackService(TrackRepository trackRepository,
+                        @Lazy AlbumService albumService, // Giữ @Lazy ở đây
+                        ArtistService artistService,
+                        @Lazy PlayHistoryService playHistoryService) { // Thêm @Lazy ở đây
+        this.trackRepository = trackRepository;
+        this.albumService = albumService;
+        this.artistService = artistService;
+        this.playHistoryService = playHistoryService; // Gán giá trị
+    }
 
     // FR-1.1: Danh sách bài nhạc (PAGINATED)
     public List<TrackResponseDTO> getAllTracks(Pageable pageable) {
@@ -47,6 +59,7 @@ public class TrackService {
             dto.setTrack(toResponseDTO(track));
             dto.setLyrics(track.getLyrics());
              if (track.getAlbum() != null) {
+                // Gọi albumService ở đây sẽ kích hoạt @Lazy dependency
                 dto.setAlbum(albumService.getAlbum(track.getAlbum().getId()));
             }
             return dto;
@@ -82,12 +95,13 @@ public class TrackService {
     public TrackResponseDTO playTrack(Long userId, Long trackId) {
         Track track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new RuntimeException("Track not found: " + trackId));
-        
+
         track.setPlayCount(track.getPlayCount() + 1);
         trackRepository.save(track);
-        
+
+        // Gọi playHistoryService ở đây sẽ kích hoạt @Lazy dependency
         playHistoryService.logPlayHistory(userId, trackId);
-        
+
         return toResponseDTO(track);
     }
 
@@ -185,13 +199,11 @@ public class TrackService {
         link.setShareUrl("https://vibemine.app/track/" + trackId); // Cần URL thực tế
         link.setTrackTitle(track.getTitle());
         String artistName = "Unknown Artist";
-        // --- SỬA LỖI: Sử dụng Artist::getName đúng cách ---
         if (track.getArtists() != null && !track.getArtists().isEmpty()) {
             artistName = track.getArtists().stream()
-                            .map(Artist::getName) // Giờ đã có thể dùng vì đã import Artist
+                            .map(Artist::getName)
                             .collect(Collectors.joining(", "));
         }
-        // --- KẾT THÚC SỬA LỖI ---
         link.setArtistName(artistName);
         link.setMessage("🎵 Nghe ngay bài hát tuyệt vời này: " + track.getTitle() + " - " + artistName);
         return link;
@@ -207,14 +219,14 @@ public class TrackService {
         dto.setTitle(track.getTitle());
         dto.setCoverArtUrl(track.getCoverArtUrl());
         dto.setTrackUrl(track.getTrackUrl());
-        dto.setDuration(track.getDuration()); // Duration giờ là milliseconds
+        dto.setDuration(track.getDuration());
         dto.setPlayCount(track.getPlayCount());
         dto.setFavoriteCount(track.getFavoriteCount());
         dto.setTrending(track.isTrending());
 
         if (track.getArtists() != null && !track.getArtists().isEmpty()) {
             dto.setArtists(track.getArtists().stream()
-                    .map(artistService::toDTO) // Sử dụng hàm toDTO của ArtistService
+                    .map(artistService::toDTO)
                     .collect(Collectors.toList()));
         }
 
@@ -223,6 +235,10 @@ public class TrackService {
             albumDTO.setId(track.getAlbum().getId());
             albumDTO.setTitle(track.getAlbum().getTitle());
             albumDTO.setCoverArtUrl(track.getAlbum().getCoverArtUrl());
+            albumDTO.setReleaseYear(track.getAlbum().getReleaseYear());
+            if (track.getAlbum().getArtist() != null) {
+                 albumDTO.setArtist(artistService.toDTO(track.getAlbum().getArtist()));
+            }
             dto.setAlbum(albumDTO);
         }
         return dto;

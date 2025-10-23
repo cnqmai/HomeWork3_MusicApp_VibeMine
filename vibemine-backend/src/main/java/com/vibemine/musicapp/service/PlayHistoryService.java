@@ -7,7 +7,8 @@ import com.vibemine.musicapp.model.PlayHistory;
 import com.vibemine.musicapp.model.Track;
 import com.vibemine.musicapp.repository.PlayHistoryRepository;
 import com.vibemine.musicapp.repository.TrackRepository;
-import lombok.RequiredArgsConstructor;
+// import lombok.RequiredArgsConstructor; // Bỏ import này
+import org.springframework.context.annotation.Lazy; // Thêm import này
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
@@ -18,11 +19,20 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
-@RequiredArgsConstructor
+// @RequiredArgsConstructor // Bỏ chú thích này
 public class PlayHistoryService {
     private final PlayHistoryRepository playHistoryRepository;
     private final TrackRepository trackRepository;
-    private final TrackService trackService; // TrackService sẽ được inject (do @RequiredArgsConstructor)
+    private final TrackService trackService; // Dependency gây ra vòng tròn
+
+    // Sử dụng Constructor Injection với @Lazy cho TrackService
+    public PlayHistoryService(PlayHistoryRepository playHistoryRepository,
+                              TrackRepository trackRepository,
+                              @Lazy TrackService trackService) { // Thêm @Lazy ở đây
+        this.playHistoryRepository = playHistoryRepository;
+        this.trackRepository = trackRepository;
+        this.trackService = trackService;
+    }
 
     // FR-8.3: Lưu lịch sử nghe
     public void logPlayHistory(Long userId, Long trackId) {
@@ -41,7 +51,7 @@ public class PlayHistoryService {
     public List<HistoryDTO> getUserHistory(Long userId, int limit) {
         return playHistoryRepository.findByUserIdOrderByPlayedAtDesc(userId).stream()
                 .limit(limit > 0 ? limit : 50) // Đảm bảo limit hợp lệ
-                .map(this::toHistoryDTO)
+                .map(this::toHistoryDTO) // Gọi hàm nội bộ
                 .filter(Objects::nonNull) // Lọc bỏ track đã bị xóa
                 .collect(Collectors.toList());
     }
@@ -56,6 +66,7 @@ public class PlayHistoryService {
 
         // 2. Nếu không có lịch sử, trả về trending
         if (topTrackIds.isEmpty()) {
+            // Gọi trackService ở đây sẽ kích hoạt @Lazy dependency
             return trackService.getTrendingTracks(20); // Lấy 20 bài trending
         }
 
@@ -64,13 +75,13 @@ public class PlayHistoryService {
 
         // 4. Lấy thông tin (Genre, Artist) từ 5 track top
         List<Track> topTracks = trackRepository.findAllById(topTrackIds);
-        
+
         // Đếm tần suất Genre
         Map<String, Long> genreCounts = topTracks.stream()
                 .map(Track::getGenre)
                 .filter(Objects::nonNull)
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
-        
+
         // Đếm tần suất Artist
         Map<Artist, Long> artistCounts = topTracks.stream()
                 .flatMap(track -> track.getArtists() != null ? track.getArtists().stream() : Stream.empty())
@@ -78,10 +89,10 @@ public class PlayHistoryService {
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
         // 5. Tìm Genre và Artist yêu thích nhất
-        Optional<String> favoriteGenre = genreCounts.isEmpty() ? Optional.empty() : 
+        Optional<String> favoriteGenre = genreCounts.isEmpty() ? Optional.empty() :
             Optional.of(Collections.max(genreCounts.entrySet(), Map.Entry.comparingByValue()).getKey());
-            
-        Optional<Long> favoriteArtistId = artistCounts.isEmpty() ? Optional.empty() : 
+
+        Optional<Long> favoriteArtistId = artistCounts.isEmpty() ? Optional.empty() :
             Optional.of(Collections.max(artistCounts.entrySet(), Map.Entry.comparingByValue()).getKey().getId());
 
         // 6. Lấy bài hát gợi ý
@@ -90,8 +101,8 @@ public class PlayHistoryService {
         // Gợi ý theo Genre (lấy 10 bài)
         favoriteGenre.ifPresent(genre -> recommendedTracks.addAll(
             trackRepository.findByGenreIgnoreCaseAndIdNotIn(
-                genre, 
-                allListenedTrackIds, 
+                genre,
+                allListenedTrackIds,
                 PageRequest.of(0, 10)
             )
         ));
@@ -99,12 +110,12 @@ public class PlayHistoryService {
         // Gợi ý theo Artist (lấy 10 bài)
         favoriteArtistId.ifPresent(artistId -> recommendedTracks.addAll(
             trackRepository.findByArtists_IdAndIdNotIn(
-                artistId, 
-                allListenedTrackIds, 
+                artistId,
+                allListenedTrackIds,
                 PageRequest.of(0, 10)
             )
         ));
-        
+
         // 7. Nếu vẫn không đủ, thêm trending (chưa nghe)
         if (recommendedTracks.size() < 20) {
              List<Track> trendingTracks = trackRepository.findAllByOrderByPlayCountDesc(PageRequest.of(0, 40)); // Lấy nhiều hơn
@@ -117,7 +128,7 @@ public class PlayHistoryService {
         return recommendedTracks.stream()
                 .distinct() // Loại bỏ trùng lặp
                 .limit(20)
-                .map(trackService::toResponseDTO)
+                .map(trackService::toResponseDTO) // Gọi trackService ở đây sẽ kích hoạt @Lazy dependency
                 .collect(Collectors.toList());
     }
 

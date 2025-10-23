@@ -1,6 +1,6 @@
 package com.vibemine.musicapp.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.*; // Đảm bảo import đầy đủ
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,12 +12,15 @@ import java.util.List;
 public class Track {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     private String title;           // FR-1.2
     private String genre;
     private String coverArtUrl;     // FR-1.2
     private String trackUrl;        // FR-2.1
+
+    @Column(columnDefinition = "TEXT") // <-- THÊM DÒNG NÀY
     private String lyrics;          // FR-6.1
+
     private Long duration;          // FR-2.4
     private Long playCount = 0L;
     private Long favoriteCount = 0L;
