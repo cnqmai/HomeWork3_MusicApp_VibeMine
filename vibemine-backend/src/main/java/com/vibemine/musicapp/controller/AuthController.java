@@ -31,6 +31,11 @@ class SimpleAuthResponse {
     public Long userId;
 }
 
+class ResetPasswordRequest {
+    public String email;
+    public String newPassword;
+}
+
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*") // allow all origins for quick local testing
@@ -96,5 +101,24 @@ public class AuthController {
         
         // Trả về ResponseEntity<SimpleAuthResponse>
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Endpoint Đặt lại mật khẩu (Cách đơn giản)
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest resetRequest) {
+        try {
+            boolean success = authService.resetPassword(resetRequest.email, resetRequest.newPassword);
+            if (success) {
+                return ResponseEntity.ok("Đặt lại mật khẩu thành công.");
+            } else {
+                // Trường hợp không tìm thấy email
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy người dùng với email này.");
+            }
+        } catch (Exception e) {
+            // Các lỗi khác (ví dụ: lỗi lưu vào DB)
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi khi đặt lại mật khẩu: " + e.getMessage());
+        }
     }
 }

@@ -57,4 +57,30 @@ public class AuthService {
             return Optional.empty();
         }
     }
+
+    /**
+     * Đặt lại mật khẩu cho người dùng dựa trên email (Cách đơn giản).
+     * @param email Email của người dùng cần đặt lại mật khẩu.
+     * @param newPassword Mật khẩu mới (chưa mã hóa).
+     * @return true nếu thành công, false nếu không tìm thấy email.
+     */
+    public boolean resetPassword(String email, String newPassword) {
+        // Tìm người dùng bằng email
+        Optional<User> userOptional = userRepository.findByEmail(email); // Giả sử bạn có phương thức này trong UserRepository
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            // Mã hóa mật khẩu mới
+            String encodedPassword = passwordEncoder.encode(newPassword);
+            // Cập nhật mật khẩu mới cho người dùng
+            user.setPassword(encodedPassword);
+            // Lưu lại thông tin người dùng vào DB
+            userRepository.save(user);
+            System.out.println("Mật khẩu cho user " + user.getUsername() + " đã được đặt lại.");
+            return true; // Thành công
+        } else {
+            System.out.println("Không tìm thấy người dùng với email: " + email);
+            return false; // Không tìm thấy người dùng
+        }
+    }
 }

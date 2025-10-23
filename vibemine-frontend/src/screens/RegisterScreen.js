@@ -4,7 +4,9 @@ import axios from 'axios';
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // !! QUAN TRỌNG: Đảm bảo địa chỉ IP này giống với địa chỉ bạn đã cấu hình ở LoginScreen.
-const API_URL = 'http://172.20.10.2:8080'; // Ví dụ: 'http://192.168.1.10:8080'
+const API_URL = 'http://192.168.100.190:8080';
+// 192.168.100.190: Nhà
+// 172.20.10.2: 4g su
 
 export default function RegisterScreen({ navigation }) {
     const [email, setEmail] = useState('');

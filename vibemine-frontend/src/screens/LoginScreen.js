@@ -4,7 +4,9 @@ import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const API_URL = 'http://172.20.10.2:8080'; // Giữ nguyên IP bạn đã cấu hình
+const API_URL = 'http://192.168.100.190:8080'; // Giữ nguyên IP bạn đã cấu hình
+// 192.168.100.190: Nhà
+// 172.20.10.2: 4g su
 
 export default function LoginScreen({ navigation }) {
     const [username, setUsername] = useState('');
