@@ -1,7 +1,6 @@
 package com.vibemine.musicapp.controller;
 
-import com.vibemine.musicapp.dto.TrackDetailDTO;
-import com.vibemine.musicapp.dto.TrackResponseDTO;
+import com.vibemine.musicapp.dto.*;
 import com.vibemine.musicapp.service.TrackService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -18,11 +17,7 @@ import java.util.List;
 public class TrackController {
     private final TrackService trackService;
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // 1. QUẢN LÝ NHẠC (FR-1)
-    // ═══════════════════════════════════════════════════════════════════════════
-    
-    // FR-1.1: Danh sách bài nhạc có sẵn
+    // FR-1.1: Danh sách bài nhạc ✅ SỬA LỖI PAGINATION
     @GetMapping
     public ResponseEntity<List<TrackResponseDTO>> getAllTracks(
             @RequestParam(defaultValue = "0") int page,
@@ -31,7 +26,7 @@ public class TrackController {
         return ResponseEntity.ok(trackService.getAllTracks(pageable));
     }
 
-    // FR-1.2: Chi tiết bài hát (tên, ca sĩ, ảnh bìa)
+    // FR-1.2: Chi tiết bài hát
     @GetMapping("/{id}")
     public ResponseEntity<TrackDetailDTO> getTrackDetail(@PathVariable Long id) {
         return trackService.getTrackDetail(id)
@@ -39,7 +34,7 @@ public class TrackController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // FR-1.3: Tìm kiếm theo tên/ca sĩ
+    // FR-1.3: Tìm kiếm ✅ SỬA LỖI PAGINATION
     @GetMapping("/search")
     public ResponseEntity<List<TrackResponseDTO>> searchTracks(
             @RequestParam String q,
@@ -48,34 +43,24 @@ public class TrackController {
         return ResponseEntity.ok(trackService.searchTracks(q, page, size));
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // 2. PHÁT NHẠC (FR-2)
-    // ═══════════════════════════════════════════════════════════════════════════
-    
-    // FR-2.2: Next Track
+    // FR-2.1: Play track
+    @PostMapping("/{id}/play")
+    public ResponseEntity<TrackResponseDTO> playTrack(@PathVariable Long id) {
+        return ResponseEntity.ok(trackService.playTrack(id));
+    }
+
+    // FR-2.2: Next/Previous
     @GetMapping("/next/{currentId}")
     public ResponseEntity<TrackResponseDTO> getNextTrack(@PathVariable Long currentId) {
         return ResponseEntity.ok(trackService.getNextTrack(currentId));
     }
 
-    // FR-2.2: Previous Track
     @GetMapping("/prev/{currentId}")
     public ResponseEntity<TrackResponseDTO> getPreviousTrack(@PathVariable Long currentId) {
         return ResponseEntity.ok(trackService.getPreviousTrack(currentId));
     }
 
-    // FR-2.1: Play track (tăng play count)
-    @PostMapping("/{id}/play")
-    public ResponseEntity<TrackResponseDTO> playTrack(@PathVariable Long id) {
-        TrackResponseDTO track = trackService.playTrack(id);
-        return ResponseEntity.ok(track);
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // 6. QUẢN LÝ NHẠC NÂNG CAO (FR-6.4)
-    // ═══════════════════════════════════════════════════════════════════════════
-    
-    // FR-6.4: Tracks theo Genre
+    // FR-6.4: Tracks theo Genre ✅ SỬA LỖI
     @GetMapping("/genre/{genre}")
     public ResponseEntity<List<TrackResponseDTO>> getTracksByGenre(
             @PathVariable String genre,
@@ -84,14 +69,24 @@ public class TrackController {
         return ResponseEntity.ok(trackService.getTracksByGenre(genre, page, size));
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // 8. CÁ NHÂN HÓA & GỢI Ý (FR-8)
-    // ═══════════════════════════════════════════════════════════════════════════
-    
-    // FR-8.2: Nhạc xu hướng/Top bài hát
+    // FR-6.2: Tải offline ✅ SỬA LỖI DTO
+    @PostMapping("/users/{userId}/offline/{trackId}")
+    public ResponseEntity<DownloadStatusDTO> downloadTrack(
+            @PathVariable Long userId,
+            @PathVariable Long trackId) {
+        return ResponseEntity.ok(trackService.downloadTrack(userId, trackId));
+    }
+
+    // FR-8.2: Trending
     @GetMapping("/trending")
     public ResponseEntity<List<TrackResponseDTO>> getTrendingTracks(
             @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(trackService.getTrendingTracks(limit));
+    }
+
+    // FR-9.1: Share ✅ SỬA LỖI DTO
+    @GetMapping("/{id}/share")
+    public ResponseEntity<ShareLinkDTO> getShareLink(@PathVariable Long id) {
+        return ResponseEntity.ok(trackService.getShareLink(id));
     }
 }
