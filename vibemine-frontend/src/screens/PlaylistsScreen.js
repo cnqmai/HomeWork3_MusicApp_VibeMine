@@ -10,6 +10,7 @@ import {
   Alert,
   RefreshControl,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import TrackItem from '../components/TrackItem';
@@ -19,6 +20,7 @@ import { useMusicPlayer } from '../hooks/useMusicPlayer';
 import { storage } from '../utils/storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { getDownloadedTracks } from '../utils/DownloadManager'; // Import download manager
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PlaylistsScreen({ navigation }) {
   const [playlists, setPlaylists] = useState([]);
@@ -29,8 +31,7 @@ export default function PlaylistsScreen({ navigation }) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
-  const { playTrack } = useMusicPlayer();
-  const userId = 1;
+  const { playTrack, userId } = useMusicPlayer(); // Change this line to destructure both playTrack and userId
   const [downloadedTracksMap, setDownloadedTracksMap] = useState({});
 
   // --- Tải dữ liệu ---
@@ -169,13 +170,19 @@ export default function PlaylistsScreen({ navigation }) {
   const renderPlaylist = ({ item }) => (
     <TouchableOpacity
       style={styles.playlistItem}
-      onPress={() => loadPlaylistTracks(item.id, item.name)} // Truyền cả tên để hiển thị tạm
+      onPress={() => loadPlaylistTracks(item.id, item.name)}
     >
-      <Ionicons name="list-outline" size={30} color="#8A2BE2" /> {/* Màu tím khác */}
+      <Ionicons name="list-outline" size={30} color="#8A2BE2" />
       <View style={styles.playlistInfo}>
-        <Text style={styles.playlistTitle} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.playlistTitle} numberOfLines={1}>
+          {item?.name || ''}
+        </Text>
         <Text style={styles.playlistCount}>
-          {item.trackCount === 1 ? '1 bài hát' : `${item.trackCount || 0} bài hát`}
+          {item?.trackCount === 1 ? (
+            <Text>1 bài hát</Text>
+          ) : (
+            <Text>{`${item?.trackCount || 0} bài hát`}</Text>
+          )}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={24} color="#ccc" />
@@ -186,20 +193,18 @@ export default function PlaylistsScreen({ navigation }) {
     <TrackItem
       track={item}
       onPress={(trackData, uri) => {
-        // console.log(`PlaylistScreen: Playing ${trackData.title}, localUri: ${uri}`); // Debug log
-        playTrack(trackData, uri);
+        playTrack(trackData, uri); // Use playTrack directly
         navigation.navigate('Player');
       }}
-      isFavorite={false} // Cần logic check favorite nếu muốn
-      // onToggleFavorite={() => toggleFav(item.id)} // Cần logic toggle favorite
-      onDownloadsChange={loadDownloadedStatus} // Cập nhật download status
+      isFavorite={false}
+      onDownloadsChange={loadDownloadedStatus}
     />
   );
-
+  
   // --- Render Chi tiết Playlist ---
   if (selectedPlaylist) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['right', 'left']}>
         <View style={styles.playlistHeader}>
           <TouchableOpacity
             onPress={() => setSelectedPlaylist(null)} // Chỉ cần set null để quay lại
@@ -207,8 +212,10 @@ export default function PlaylistsScreen({ navigation }) {
           >
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.selectedTitle} numberOfLines={1}>{selectedPlaylist.name}</Text>
-          <View style={{ width: 40 }} />{/* Placeholder */}
+          <Text style={styles.selectedTitle} numberOfLines={1}>
+            {selectedPlaylist?.name || ''}
+          </Text>
+          <View style={{ width: 40 }} />
         </View>
 
         {loadingTracks ? (
@@ -231,21 +238,21 @@ export default function PlaylistsScreen({ navigation }) {
         )}
         {/* MiniPlayer có thể cần thiết ở đây nếu màn hình này không phải là tab */}
         <MiniPlayer navigation={navigation} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   // --- Render Danh sách Playlists ---
    if (initialLoading) {
     return (
-      <View style={[styles.container, styles.center]}>
+      <SafeAreaView style={[styles.container, styles.center]} edges={['right', 'left']}>
         <ActivityIndicator size="large" color="#9C27B0" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['right', 'left']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>🎼 Playlists</Text>
         <TouchableOpacity
@@ -256,19 +263,25 @@ export default function PlaylistsScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-        {(playlists.length === 0 && !loadingPlaylists) ? (
-             <Text style={styles.emptyText}>Bạn chưa tạo playlist nào. Nhấn + để tạo.</Text>
-        ) : (
-            <FlatList
-                data={playlists}
-                renderItem={renderPlaylist}
-                keyExtractor={(item) => item.id.toString()}
-                contentContainerStyle={styles.playlistList}
-                refreshControl={
-                   <RefreshControl refreshing={loadingPlaylists} onRefresh={onRefreshPlaylists} colors={["#9C27B0"]}/>
-                }
+      {playlists.length === 0 && !loadingPlaylists ? (
+        <Text style={styles.emptyText}>
+          Bạn chưa tạo playlist nào. Nhấn + để tạo.
+        </Text>
+      ) : (
+        <FlatList
+          data={playlists}
+          renderItem={renderPlaylist}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.playlistList}
+          refreshControl={
+            <RefreshControl
+              refreshing={loadingPlaylists}
+              onRefresh={onRefreshPlaylists}
+              colors={["#9C27B0"]}
             />
-        )}
+          }
+        />
+      )}
 
       {/* Modal tạo playlist */}
       <Modal
@@ -311,7 +324,7 @@ export default function PlaylistsScreen({ navigation }) {
 
       {/* MiniPlayer có thể cần thiết ở đây nếu màn hình này không phải là tab */}
        <MiniPlayer navigation={navigation} />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -332,9 +345,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
+    marginTop: 40, // Add top margin to push header down
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    // Xóa paddingTop vì đã có SafeAreaView
   },
   headerTitle: {
     fontSize: 22,

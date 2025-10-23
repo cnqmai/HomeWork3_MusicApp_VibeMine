@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TouchableOpacity, // Để thêm nút back
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; // Để thêm icon back
 import api from '../api/api';

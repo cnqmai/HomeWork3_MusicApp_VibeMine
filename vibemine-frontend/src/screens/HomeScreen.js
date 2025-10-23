@@ -22,6 +22,7 @@ import { useMusicPlayer } from '../hooks/useMusicPlayer';
 import { getDownloadedTracks } from '../utils/DownloadManager';
 import { useFocusEffect } from '@react-navigation/native';
 import debounce from 'lodash.debounce';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -29,6 +30,8 @@ const { width } = Dimensions.get('window');
 const GENRES = ['Indie', 'V-Pop', 'Rap', 'R&B', 'Ballad', 'EDM', 'Acoustic'];
 
 export default function HomeScreen({ navigation }) {
+  const { playTrack, userId } = useMusicPlayer(); // Change this line to directly destructure playTrack
+
   const [tracks, setTracks] = useState([]); // Đổi tên: recommendations
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false); // Loading cho "Gợi ý" / Search
@@ -39,7 +42,6 @@ export default function HomeScreen({ navigation }) {
   const [albums, setAlbums] = useState([]);
   const [loadingArtists, setLoadingArtists] = useState(false);
   const [artists, setArtists] = useState([]);
-  const { playTrack, userId } = useMusicPlayer(); // Lấy userId từ hook
   const [downloadedTracksMap, setDownloadedTracksMap] = useState({});
 
   // --- Tải dữ liệu ---
@@ -151,7 +153,7 @@ export default function HomeScreen({ navigation }) {
       key={`track-${item.id}-${index}`}
       track={item}
       onPress={(trackData, uri) => {
-        playTrack(trackData, uri);
+        playTrack(trackData, uri); // Use playTrack directly
         navigation.navigate('Player');
       }}
       onDownloadsChange={loadDownloadedStatus}
@@ -207,105 +209,105 @@ export default function HomeScreen({ navigation }) {
 
   // --- Return JSX (Đã sửa lỗi JSX) ---
   return (
-    <View style={styles.outerContainer}>
-        <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollViewContent}
-            refreshControl={
-                <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={["#9C27B0"]}/>
-            }
-            keyboardShouldPersistTaps="handled"
-            >
-            <TextInput
-                placeholder="Tìm kiếm bài hát, ca sĩ..."
-                onChangeText={handleSearchChange}
-                value={searchQuery}
-                style={styles.searchBar}
-                placeholderTextColor="#888"
-            />
+    <SafeAreaView style={styles.outerContainer} edges={['right', 'left']}>
+      <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={["#9C27B0"]}/>
+          }
+          keyboardShouldPersistTaps="handled"
+          >
+          <TextInput
+              placeholder="Tìm kiếm bài hát, ca sĩ..."
+              onChangeText={handleSearchChange}
+              value={searchQuery}
+              style={styles.searchBar}
+              placeholderTextColor="#888"
+          />
 
-            {/* Trending Section */}
-            <Text style={styles.sectionTitle}>🎯 Trending</Text>
-            {loadingTrending ? (
-                <ActivityIndicator style={styles.horizontalLoader} color="#9C27B0" />
-            ) : trending.length > 0 ? (
-                <FlatList
-                    data={trending}
-                    renderItem={renderTrack}
-                    keyExtractor={(item) => `trending-${item.id}`}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.horizontalListTracks}
-                />
-            ) : (
-                <Text style={styles.emptyTextSmall}>Không có dữ liệu trending.</Text>
-            )}
+          {/* Trending Section */}
+          <Text style={styles.sectionTitle}>🎯 Trending</Text>
+          {loadingTrending ? (
+              <ActivityIndicator style={styles.horizontalLoader} color="#9C27B0" />
+          ) : trending.length > 0 ? (
+              <FlatList
+                  data={trending}
+                  renderItem={renderTrack}
+                  keyExtractor={(item) => `trending-${item.id}`}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalListTracks}
+              />
+          ) : (
+              <Text style={styles.emptyTextSmall}>Không có dữ liệu trending.</Text>
+          )}
 
-            {/* Artist Section */}
-            <Text style={styles.sectionTitle}>🎤 Nghệ Sĩ Nổi Bật</Text>
-            {loadingArtists ? (
-                 <ActivityIndicator style={styles.horizontalLoader} color="#9C27B0" />
-             ) : artists.length > 0 ? (
-                 <FlatList
-                    data={artists}
-                    renderItem={renderArtistItem}
-                    keyExtractor={(item) => `artist-${item.id}`}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.horizontalListCards}
-                 />
-             ) : (
-                  <Text style={styles.emptyTextSmall}>Không có dữ liệu nghệ sĩ.</Text>
-             )}
+          {/* Artist Section */}
+          <Text style={styles.sectionTitle}>🎤 Nghệ Sĩ Nổi Bật</Text>
+          {loadingArtists ? (
+               <ActivityIndicator style={styles.horizontalLoader} color="#9C27B0" />
+           ) : artists.length > 0 ? (
+               <FlatList
+                  data={artists}
+                  renderItem={renderArtistItem}
+                  keyExtractor={(item) => `artist-${item.id}`}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalListCards}
+               />
+           ) : (
+                <Text style={styles.emptyTextSmall}>Không có dữ liệu nghệ sĩ.</Text>
+           )}
 
-            {/* Album Section */}
-            <Text style={styles.sectionTitle}>💽 Album Mới</Text>
-             {loadingAlbums ? (
-                 <ActivityIndicator style={styles.horizontalLoader} color="#9C27B0" />
-             ) : albums.length > 0 ? (
-                 <FlatList
-                    data={albums}
-                    renderItem={renderAlbumItem}
-                    keyExtractor={(item) => `album-${item.id}`}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.horizontalListCards}
-                 />
-             ) : (
-                  <Text style={styles.emptyTextSmall}>Không có dữ liệu album.</Text>
-             )}
+          {/* Album Section */}
+          <Text style={styles.sectionTitle}>💽 Album Mới</Text>
+           {loadingAlbums ? (
+               <ActivityIndicator style={styles.horizontalLoader} color="#9C27B0" />
+           ) : albums.length > 0 ? (
+               <FlatList
+                  data={albums}
+                  renderItem={renderAlbumItem}
+                  keyExtractor={(item) => `album-${item.id}`}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalListCards}
+               />
+           ) : (
+                <Text style={styles.emptyTextSmall}>Không có dữ liệu album.</Text>
+           )}
 
-            {/* Genre Section */}
-            <Text style={styles.sectionTitle}>🎵 Thể loại</Text>
-            <FlatList
-                data={GENRES}
-                renderItem={renderGenreItem}
-                keyExtractor={(item) => `genre-${item}`}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalListCards}
-            />
+          {/* Genre Section */}
+          <Text style={styles.sectionTitle}>🎵 Thể loại</Text>
+          <FlatList
+              data={GENRES}
+              renderItem={renderGenreItem}
+              keyExtractor={(item) => `genre-${item}`}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalListCards}
+          />
 
-            {/* Main Track List Section (CẬP NHẬT TIÊU ĐỀ) */}
-            <Text style={styles.sectionTitle}>🎧 {searchQuery ? 'Kết quả tìm kiếm' : 'Gợi ý cho bạn'}</Text>
-            {loading && tracks.length === 0 ? (
-                <View style={styles.centerLoader}>
-                    <ActivityIndicator size="large" color="#9C27B0" />
-                </View>
-            ) : tracks.length === 0 ? (
-                <Text style={styles.emptyText}>{searchQuery ? 'Không tìm thấy kết quả phù hợp.' : 'Không có bài hát nào.'}</Text>
-            ): (
-                <View style={styles.trackListContainer}>
-                    {/* Sửa: Dùng `item.id` làm key */}
-                    {tracks.map((item, index) => renderTrack({ item, index, key: item.id }))}
-                </View>
-            )}
+          {/* Main Track List Section (CẬP NHẬT TIÊU ĐỀ) */}
+          <Text style={styles.sectionTitle}>🎧 {searchQuery ? 'Kết quả tìm kiếm' : 'Gợi ý cho bạn'}</Text>
+          {loading && tracks.length === 0 ? (
+              <View style={styles.centerLoader}>
+                  <ActivityIndicator size="large" color="#9C27B0" />
+              </View>
+          ) : tracks.length === 0 ? (
+              <Text style={styles.emptyText}>{searchQuery ? 'Không tìm thấy kết quả phù hợp.' : 'Không có bài hát nào.'}</Text>
+          ): (
+              <View style={styles.trackListContainer}>
+                  {/* Sửa: Dùng `item.id` làm key */}
+                  {tracks.map((item, index) => renderTrack({ item, index, key: item.id }))}
+              </View>
+          )}
 
-        </ScrollView>
+      </ScrollView>
 
-        {/* Mini Player đặt ở đây, nằm trên ScrollView */}
-        <MiniPlayer navigation={navigation} />
-    </View>
+      {/* Mini Player đặt ở đây, nằm trên ScrollView */}
+      <MiniPlayer navigation={navigation} />
+    </SafeAreaView>
   );
 }
 
@@ -319,17 +321,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollViewContent: {
-     paddingBottom: 80, // Khoảng trống cho MiniPlayer
+    paddingBottom: 80, // Khoảng trống cho MiniPlayer
   },
   searchBar: {
     marginHorizontal: 16,
-    marginTop: Platform.OS === 'ios' ? 10 : 15, // Chỉnh margin top
-    marginBottom: 10,
-    paddingHorizontal: 20, // Tăng padding
+    marginTop: 60, // Tăng margin top để đẩy xuống
+    marginBottom: 15, // Tăng margin bottom
+    paddingHorizontal: 20,
     paddingVertical: Platform.OS === 'ios' ? 12 : 9,
     backgroundColor: '#fff',
     borderRadius: 25,
-    fontSize: 15, // Giảm font size
+    fontSize: 15,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },

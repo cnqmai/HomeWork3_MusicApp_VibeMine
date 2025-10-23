@@ -131,7 +131,7 @@ const TrackItem = memo(({ track, onPress, isFavorite = false, onToggleFavorite, 
 
   // --- Định dạng Duration ---
   const formatDuration = (milliseconds) => {
-    if (isNaN(milliseconds) || milliseconds <= 0) return '--:--'; // Xử lý duration không hợp lệ
+    if (isNaN(milliseconds) || milliseconds <= 0) return <Text>--:--</Text>; // Wrap trong Text component
     const totalSeconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;

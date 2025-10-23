@@ -1,6 +1,6 @@
 // src/components/HistoryItem.js
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Hàm format thời gian (ví dụ: "2 phút trước", "hôm qua", "20/10/2025")

@@ -9,13 +9,15 @@ import {
   RefreshControl,
   Alert,
   Platform,
-  TouchableOpacity, // Thêm
+  TouchableOpacity,
+  ScrollView, // Thêm ScrollView vào imports
 } from 'react-native';
 import api from '../api/api';
 import { useFocusEffect } from '@react-navigation/native';
 import { useMusicPlayer } from '../hooks/useMusicPlayer';
 import HistoryItem from '../components/HistoryItem'; // Import component mới
 import MiniPlayer from '../components/MiniPlayer'; // Import MiniPlayer
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HistoryScreen({ navigation }) {
   const [history, setHistory] = useState([]);
@@ -83,7 +85,7 @@ export default function HistoryScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['right', 'left']}>
       <Text style={styles.title}>🕘 Lịch sử nghe nhạc</Text>
       
       {/* Hiển thị loading toàn màn hình nếu đang tải lần đầu */}
@@ -114,7 +116,7 @@ export default function HistoryScreen({ navigation }) {
       
       {/* MiniPlayer nằm trên cùng */}
       <MiniPlayer navigation={navigation} />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -132,13 +134,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30, // Tăng padding top
     paddingHorizontal: 20,
-    paddingBottom: 15,
+    paddingVertical: 15,
+    marginTop: 40,
     color: '#333',
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    // Xóa paddingTop vì đã có SafeAreaView
   },
   list: {
     paddingBottom: 120, // Tăng padding bottom cho MiniPlayer

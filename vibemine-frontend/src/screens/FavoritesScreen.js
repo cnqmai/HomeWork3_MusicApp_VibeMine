@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert, // Thêm Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import TrackItem from '../components/TrackItem';
 import api from '../api/api';
 import { useMusicPlayer } from '../hooks/useMusicPlayer';
@@ -165,15 +166,15 @@ export default function FavoritesScreen({ navigation }) {
   // --- Render Loading ban đầu ---
    if (initialLoading) {
     return (
-      <View style={[styles.container, styles.center]}>
+      <SafeAreaView style={[styles.container, styles.center]} edges={['right', 'left']}>
         <ActivityIndicator size="large" color="#9C27B0" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   // --- Render chính ---
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['right', 'left']}>
       <Text style={styles.title}>💖 Bài hát yêu thích</Text>
       {(favorites.length === 0 && !loading) ? (
            <Text style={styles.emptyText}>Chưa có bài hát yêu thích nào.</Text>
@@ -189,7 +190,7 @@ export default function FavoritesScreen({ navigation }) {
           />
        )}
         {/* Tab Navigator quản lý MiniPlayer */}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -207,11 +208,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    paddingTop: 30, // Tăng padding top
     paddingHorizontal: 20,
-    paddingBottom: 15, // Tăng padding bottom
+    paddingVertical: 15,
+    marginTop: 40, // Add marginTop to push title down
     color: '#333',
-    backgroundColor: '#fff', // Thêm nền trắng cho header
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
