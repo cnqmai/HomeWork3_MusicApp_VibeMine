@@ -6,21 +6,22 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
-  TouchableOpacity, // Để thêm nút back
+  TouchableOpacity,
   RefreshControl,
   Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // Để thêm icon back
+import { Ionicons } from '@expo/vector-icons';
 import api from '../api/api';
 import TrackItem from '../components/TrackItem';
 import { useMusicPlayer } from '../hooks/useMusicPlayer';
 import { getDownloadedTracks } from '../utils/DownloadManager';
 
 export default function CategoryTracksScreen({ route, navigation }) {
-  const { type, id, name } = route.params; // Lấy tham số: type ('album'/'artist'/'genre'), id (cho album/artist), name (cho genre/album/artist)
+  const { type, id, name } = route.params;
   const [tracks, setTracks] = useState([]);
   const [loading, setLoading] = useState(false);
-  const { playTrack } = useMusicPlayer();
+  // --- SỬA Ở ĐÂY: Lấy playQueue ---
+  const { playQueue } = useMusicPlayer();
    const [downloadedTracksMap, setDownloadedTracksMap] = useState({});
 
    // Tải danh sách đã tải về
@@ -32,10 +33,10 @@ export default function CategoryTracksScreen({ route, navigation }) {
   // Hàm gọi API dựa trên type
   const fetchTracks = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
-    setTracks([]); // Xóa list cũ trước khi fetch
+    setTracks([]);
     try {
       let response;
-      console.log(`Fetching tracks for ${type}: ${id || name}`); // Debug log
+      console.log(`Fetching tracks for ${type}: ${id || name}`);
       if (type === 'album' && id) {
         response = await api.getAlbumTracks(id);
       } else if (type === 'artist' && id) {
@@ -43,8 +44,6 @@ export default function CategoryTracksScreen({ route, navigation }) {
       } else if (type === 'genre' && name) {
         // API getTracksByGenre hiện tại không phân trang trong api.js, gọi bản không phân trang
          response = await api.getTracksByGenre(name);
-        // Nếu API backend có phân trang cho genre:
-        // response = await api.getTracksByGenre(name, 0, 50); // Lấy 50 bài đầu
       } else {
         console.error("Invalid parameters for CategoryTracksScreen:", route.params);
         Alert.alert("Lỗi", "Tham số không hợp lệ.");
@@ -52,43 +51,42 @@ export default function CategoryTracksScreen({ route, navigation }) {
         return;
       }
 
-      setTracks(response?.data || []); // Cập nhật state, đảm bảo là mảng
+      setTracks(response?.data || []);
     } catch (error) {
       console.error(`Error fetching ${type} tracks:`, error);
       Alert.alert("Lỗi", `Không thể tải danh sách bài hát theo ${type}.`);
     } finally {
       if (showLoading) setLoading(false);
     }
-  }, [type, id, name, navigation]); // Thêm navigation vào dependencies
+  }, [type, id, name, navigation, route.params]);
 
   // Effect để tải dữ liệu khi màn hình mount hoặc tham số thay đổi
   useEffect(() => {
-    loadDownloadedStatus(); // Tải trạng thái download
-    fetchTracks(); // Tải danh sách tracks
-  }, [fetchTracks, loadDownloadedStatus]); // Thêm loadDownloadedStatus
+    loadDownloadedStatus();
+    fetchTracks();
+  }, [fetchTracks, loadDownloadedStatus]);
 
    // Xử lý refresh
    const onRefresh = useCallback(() => {
-     setLoading(true); // Bắt đầu trạng thái refresh
-     Promise.all([fetchTracks(false), loadDownloadedStatus()]) // Tải lại cả 2, fetchTracks không set loading nữa
-        .finally(() => setLoading(false)); // Kết thúc trạng thái refresh
+     setLoading(true);
+     Promise.all([fetchTracks(false), loadDownloadedStatus()])
+        .finally(() => setLoading(false));
    }, [fetchTracks, loadDownloadedStatus]);
 
   // Render Item
-  const renderTrack = ({ item }) => (
+  // --- SỬA Ở ĐÂY: Thêm index và list để gọi playQueue ---
+  const renderTrack = ({ item, index }) => (
     <TrackItem
       track={item}
-      // isFavorite={...} // Cần logic check favorite
-      // onToggleFavorite={...}
-      onPress={(trackData, uri) => {
-        playTrack(trackData, uri);
-        navigation.navigate('Player'); // Điều hướng đến Player
+      onPress={() => {
+        playQueue(tracks, index); // Gọi playQueue với toàn bộ danh sách tracks và index
+        navigation.navigate('Player');
       }}
-       onDownloadsChange={loadDownloadedStatus} // Cập nhật download status
+       onDownloadsChange={loadDownloadedStatus}
     />
   );
 
-  // Lấy tiêu đề phù hợp
+  // ... (Phần còn lại của CategoryTracksScreen.js giữ nguyên)
   const getHeaderTitle = () => {
     switch (type) {
       case 'album': return `Album: ${name || 'Đang tải...'}`;
@@ -106,10 +104,10 @@ export default function CategoryTracksScreen({ route, navigation }) {
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{getHeaderTitle()}</Text>
-         <View style={{ width: 30 }} />{/* Placeholder để căn giữa title */}
+         <View style={{ width: 30 }} />
       </View>
 
-      {loading && tracks.length === 0 ? ( // Chỉ hiển thị loading lớn khi đang tải lần đầu và list rỗng
+      {loading && tracks.length === 0 ? (
         <View style={styles.centerLoader}>
           <ActivityIndicator size="large" color="#9C27B0" />
         </View>
@@ -118,7 +116,8 @@ export default function CategoryTracksScreen({ route, navigation }) {
       ) : (
         <FlatList
           data={tracks}
-          renderItem={renderTrack}
+          // --- SỬA Ở ĐÂY: Truyền index cho renderItem ---
+          renderItem={({ item, index }) => renderTrack({ item, index })}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
            refreshControl={
@@ -143,9 +142,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-    // Thêm style cho iOS status bar
     paddingTop: Platform.OS === 'ios' ? 40 : 12,
-     height: Platform.OS === 'ios' ? 90 : 60, // Chiều cao header
+     height: Platform.OS === 'ios' ? 90 : 60,
   },
   backButton: {
     padding: 5,
@@ -171,6 +169,6 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingTop: 10,
-    paddingBottom: 80, // Đủ không gian cho MiniPlayer nếu có ở layout cha
+    paddingBottom: 80,
   },
 });

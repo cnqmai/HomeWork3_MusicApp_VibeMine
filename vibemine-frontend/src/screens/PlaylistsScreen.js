@@ -31,7 +31,7 @@ export default function PlaylistsScreen({ navigation }) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
-  const { playTrack, userId } = useMusicPlayer(); // Change this line to destructure both playTrack and userId
+  const { playQueue, userId } = useMusicPlayer(); // Change this line to destructure both playQueue and userId
   const [downloadedTracksMap, setDownloadedTracksMap] = useState({});
 
   // --- Tải dữ liệu ---
@@ -193,7 +193,7 @@ export default function PlaylistsScreen({ navigation }) {
     <TrackItem
       track={item}
       onPress={(trackData, uri) => {
-        playTrack(trackData, uri); // Use playTrack directly
+        playQueue(trackData, uri); // Use playQueue directly
         navigation.navigate('Player');
       }}
       isFavorite={false}

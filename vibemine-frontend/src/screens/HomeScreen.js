@@ -1,3 +1,4 @@
+// src/screens/HomeScreen.js
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -30,9 +31,10 @@ const { width } = Dimensions.get('window');
 const GENRES = ['Indie', 'V-Pop', 'Rap', 'R&B', 'Ballad', 'EDM', 'Acoustic'];
 
 export default function HomeScreen({ navigation }) {
-  const { playTrack, userId } = useMusicPlayer(); // Change this line to directly destructure playTrack
+  // --- SỬA Ở ĐÂY: Lấy playQueue thay vì playTrack ---
+  const { playQueue, userId } = useMusicPlayer();
 
-  const [tracks, setTracks] = useState([]); // Đổi tên: recommendations
+  const [tracks, setTracks] = useState([]); // Đổi tên: recommendations -> tracks (giữ nguyên để ít thay đổi hơn)
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false); // Loading cho "Gợi ý" / Search
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -51,8 +53,7 @@ export default function HomeScreen({ navigation }) {
     setDownloadedTracksMap(map);
   }, []);
 
-  // --- CẬP NHẬT (FR-8.1) ---
-  // Đổi tên: loadTracks -> loadRecommendations
+  // Đổi tên: loadTracks -> loadRecommendations (giữ nguyên tên state `tracks` ở trên)
   const loadRecommendations = useCallback(async (showLoading = true) => {
     console.log("HomeScreen: Loading recommendations...");
     if (showLoading && tracks.length === 0) setLoading(true);
@@ -66,8 +67,7 @@ export default function HomeScreen({ navigation }) {
     } finally {
       if (showLoading) setLoading(false);
     }
-  }, [tracks.length, userId]); // Thêm userId
-  // --- KẾT THÚC CẬP NHẬT ---
+  }, [tracks.length, userId]);
 
   const loadTrending = useCallback(async () => {
     setLoadingTrending(true);
@@ -101,8 +101,8 @@ export default function HomeScreen({ navigation }) {
     console.log(`HomeScreen: Performing search for "${query}"`);
     setLoading(true);
     try {
-      // Sửa: Gọi api.searchTracks với 3 tham số
-      const { data } = await api.searchTracks(query, 0, 50); 
+      // Gọi api.searchTracks với 3 tham số
+      const { data } = await api.searchTracks(query, 0, 50);
       setTracks(data || []);
     } catch (error) {
       console.error('Search error:', error);
@@ -119,23 +119,23 @@ export default function HomeScreen({ navigation }) {
       debouncedSearch(trimmedQuery);
     } else if (trimmedQuery.length === 0 && query.length === 0) {
       console.log("HomeScreen: Search cleared, loading recommendations.");
-      loadRecommendations(false); // CẬP NHẬT: Load lại recommendations
+      loadRecommendations(false); // Load lại recommendations khi xóa hết search query
     }
   };
 
   // --- Effects ---
   useEffect(() => {
-    loadRecommendations(true); // CẬP NHẬT
+    loadRecommendations(true);
     loadTrending();
     loadAlbums();
     loadArtists();
-  }, []); // Bỏ dependencies để chỉ chạy 1 lần
+  }, []); // Chỉ chạy 1 lần khi mount
 
   useFocusEffect(useCallback(() => {
     loadDownloadedStatus();
   }, [loadDownloadedStatus]));
 
-  // --- Điều hướng (Giữ nguyên) ---
+  // --- Điều hướng ---
   const navigateToGenre = (genreName) => {
       navigation.navigate('CategoryTracks', { type: 'genre', name: genreName });
   };
@@ -148,16 +148,19 @@ export default function HomeScreen({ navigation }) {
 
 
   // --- Render ---
-  const renderTrack = ({ item, index }) => (
+  // --- SỬA Ở ĐÂY: renderTrack nhận thêm 'list' ---
+  const renderTrack = ({ item, index, list }) => (
     <TrackItem
       key={`track-${item.id}-${index}`}
       track={item}
-      onPress={(trackData, uri) => {
-        playTrack(trackData, uri); // Use playTrack directly
+      onPress={(trackData, uri) => { // trackData chính là item, uri là từ TrackItem
+        // --- SỬA Ở ĐÂY: Gọi playQueue ---
+        console.log(`Playing track ${index} from list of ${list.length}`);
+        playQueue(list, index); // Gọi playQueue với danh sách và index
         navigation.navigate('Player');
       }}
       onDownloadsChange={loadDownloadedStatus}
-      // isFavorite={...}
+      // isFavorite={...} // Bạn có thể thêm logic kiểm tra favorite nếu cần
       // onToggleFavorite={...}
     />
   );
@@ -192,7 +195,7 @@ export default function HomeScreen({ navigation }) {
     setIsRefreshing(true);
     try {
         await Promise.all([
-            loadRecommendations(false), // CẬP NHẬT
+            loadRecommendations(false), // Tải lại recommendations
             loadTrending(),
             loadAlbums(),
             loadArtists(),
@@ -204,10 +207,10 @@ export default function HomeScreen({ navigation }) {
     } finally {
         setIsRefreshing(false);
     }
-  }, [loadRecommendations, loadTrending, loadAlbums, loadArtists, loadDownloadedStatus]); // CẬP NHẬT
+  }, [loadRecommendations, loadTrending, loadAlbums, loadArtists, loadDownloadedStatus]);
 
 
-  // --- Return JSX (Đã sửa lỗi JSX) ---
+  // --- Return JSX ---
   return (
     <SafeAreaView style={styles.outerContainer} edges={['right', 'left']}>
       <ScrollView
@@ -233,7 +236,8 @@ export default function HomeScreen({ navigation }) {
           ) : trending.length > 0 ? (
               <FlatList
                   data={trending}
-                  renderItem={renderTrack}
+                  // --- SỬA Ở ĐÂY: Truyền list vào renderTrack ---
+                  renderItem={({ item, index }) => renderTrack({ item, index, list: trending })}
                   keyExtractor={(item) => `trending-${item.id}`}
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -285,27 +289,27 @@ export default function HomeScreen({ navigation }) {
               keyExtractor={(item) => `genre-${item}`}
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalListCards}
+              contentContainerStyle={styles.horizontalListCards} // Đổi thành card style để padding đều
           />
 
-          {/* Main Track List Section (CẬP NHẬT TIÊU ĐỀ) */}
+          {/* Main Track List Section (Gợi ý/Tìm kiếm) */}
           <Text style={styles.sectionTitle}>🎧 {searchQuery ? 'Kết quả tìm kiếm' : 'Gợi ý cho bạn'}</Text>
-          {loading && tracks.length === 0 ? (
+          {loading && tracks.length === 0 ? ( // Chỉ hiện loading khi list rỗng
               <View style={styles.centerLoader}>
                   <ActivityIndicator size="large" color="#9C27B0" />
               </View>
           ) : tracks.length === 0 ? (
-              <Text style={styles.emptyText}>{searchQuery ? 'Không tìm thấy kết quả phù hợp.' : 'Không có bài hát nào.'}</Text>
+              <Text style={styles.emptyText}>{searchQuery ? 'Không tìm thấy kết quả phù hợp.' : 'Không có gợi ý nào.'}</Text>
           ): (
               <View style={styles.trackListContainer}>
-                  {/* Sửa: Dùng `item.id` làm key */}
-                  {tracks.map((item, index) => renderTrack({ item, index, key: item.id }))}
+                  {/* --- SỬA Ở ĐÂY: Truyền list vào renderTrack --- */}
+                  {tracks.map((item, index) => renderTrack({ item, index, list: tracks, key: item.id }))}
               </View>
           )}
 
       </ScrollView>
 
-      {/* Mini Player đặt ở đây, nằm trên ScrollView */}
+      {/* Mini Player */}
       <MiniPlayer navigation={navigation} />
     </SafeAreaView>
   );
@@ -325,8 +329,8 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     marginHorizontal: 16,
-    marginTop: 60, // Tăng margin top để đẩy xuống
-    marginBottom: 15, // Tăng margin bottom
+    marginTop: 60,
+    marginBottom: 15,
     paddingHorizontal: 20,
     paddingVertical: Platform.OS === 'ios' ? 12 : 9,
     backgroundColor: '#fff',
@@ -341,32 +345,27 @@ const styles = StyleSheet.create({
     borderColor: '#eee',
   },
   sectionTitle: {
-    fontSize: 20, // Tăng font size
-    fontWeight: 'bold', // Đậm hơn
+    fontSize: 20,
+    fontWeight: 'bold',
     marginLeft: 16,
     marginTop: 20,
-    marginBottom: 12, // Tăng margin bottom
-    color: '#222', // Màu đậm hơn
+    marginBottom: 12,
+    color: '#222',
   },
    horizontalLoader: {
-     height: 150, // Tăng chiều cao loading
+     height: 150,
      justifyContent: 'center',
      alignItems: 'center',
    },
-  horizontalListTracks: {
+  horizontalListTracks: { // Dùng cho Trending
     paddingLeft: 16,
-    paddingRight: 8,
+    paddingRight: 8, // Để có khoảng trống cuối list
   },
-   horizontalListCards: {
+   horizontalListCards: { // Dùng cho Album, Artist, Genre
     paddingLeft: 16,
-    paddingRight: 8,
-    paddingBottom: 5, // Thêm padding bottom
+    paddingRight: 4, // Giảm padding vì card đã có marginRight
+    paddingBottom: 5,
   },
-   genreList: {
-     paddingLeft: 16,
-     paddingRight: 8,
-     marginBottom: 10,
-   },
    genreButton: {
      backgroundColor: '#fff',
      paddingHorizontal: 18,
@@ -377,9 +376,9 @@ const styles = StyleSheet.create({
      borderColor: '#ddd',
      elevation: 1,
      shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
+     shadowOffset: { width: 0, height: 1 },
+     shadowOpacity: 0.05,
+     shadowRadius: 1,
    },
    genreButtonText: {
      fontSize: 14,
@@ -388,7 +387,7 @@ const styles = StyleSheet.create({
    },
    // Card Styles for Album/Artist
    cardItem: {
-     width: 140, // Tăng kích thước card
+     width: 140,
      marginRight: 12,
      backgroundColor: '#fff',
      borderRadius: 8,
@@ -397,17 +396,17 @@ const styles = StyleSheet.create({
      shadowOffset: { width: 0, height: 1 },
      shadowOpacity: 0.1,
      shadowRadius: 3,
-     marginBottom: 5,
+     marginBottom: 5, // Thêm margin bottom nhỏ
    },
    cardImage: {
      width: 140,
-     height: 140, // Vuông
+     height: 140,
      borderTopLeftRadius: 8,
      borderTopRightRadius: 8,
-     backgroundColor: '#eee',
+     backgroundColor: '#eee', // Placeholder color
    },
    artistImage: {
-       borderRadius: 70, // Bo tròn (140 / 2)
+       borderRadius: 70, // Bo tròn cho ảnh nghệ sĩ
    },
    cardTitle: {
      fontSize: 14,
@@ -418,7 +417,7 @@ const styles = StyleSheet.create({
      paddingBottom: 2,
      textAlign: 'center',
    },
-   cardSubtitle: {
+   cardSubtitle: { // Dùng cho tên nghệ sĩ dưới album
        fontSize: 12,
        color: '#888',
        textAlign: 'center',
@@ -427,24 +426,25 @@ const styles = StyleSheet.create({
    },
    // --- Track List Styles ---
    trackListContainer: {
-     paddingBottom: 5,
+     // Không cần style đặc biệt, TrackItem tự có margin
+     paddingBottom: 5, // Thêm padding bottom nhỏ
    },
-  centerLoader: {
+  centerLoader: { // Dùng cho loading chính giữa màn hình
       marginTop: 50,
       paddingBottom: 20,
       alignItems: 'center',
   },
-  emptyText: {
+  emptyText: { // Dùng khi không có track gợi ý/tìm kiếm
       textAlign: 'center',
       marginTop: 50,
       fontSize: 16,
       color: '#666',
       paddingHorizontal: 20,
   },
-   emptyTextSmall: {
+   emptyTextSmall: { // Dùng khi không có trending/album/artist
        marginLeft: 16,
        fontSize: 14,
        color: '#888',
-       marginVertical: 10,
+       marginVertical: 10, // Thêm margin dọc
    },
 });
