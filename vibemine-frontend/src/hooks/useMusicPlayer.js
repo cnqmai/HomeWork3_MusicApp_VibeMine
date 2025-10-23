@@ -6,7 +6,9 @@ import { parseLRC } from '../utils/LyricsParser';
 import { getDownloadedTracks } from '../utils/DownloadManager'; // Import thêm
 
 export const useMusicPlayer = () => {
-  const [sound, setSound] = useState(null);
+  // --- THAY ĐỔI LỚN: Thay sound state bằng soundRef ---
+  const soundRef = useRef(null); // Sử dụng useRef để giữ tham chiếu của đối tượng Audio.Sound
+  // Thay thế sound state cũ
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -89,18 +91,25 @@ export const useMusicPlayer = () => {
     }
   }, [lyrics, isSeeking.current, repeatMode]); // Bỏ handleTrackEnd khỏi dependency
 
-   // --- Dọn dẹp ---
+   // --- Dọn dẹp (ĐÃ SỬA LỖI) ---
    const cleanup = useCallback(async (resetPlayerState = true) => {
     console.log('Cleaning up audio player...', { resetPlayerState });
-    if (sound) {
+    const localSound = soundRef.current; // Lấy sound từ ref
+    if (localSound) {
       try {
-        await sound.setStatusAsync({ shouldPlay: false }); // Dừng trước khi unload
-        await sound.unloadAsync();
-        console.log("Sound unloaded successfully.");
+        // Kiểm tra trạng thái trước khi unload để tránh lỗi "sound is not loaded"
+        const status = await localSound.getStatusAsync(); 
+        if (status.isLoaded) { 
+            await localSound.setStatusAsync({ shouldPlay: false }); // Dừng trước khi unload
+            await localSound.unloadAsync();
+            console.log("Sound unloaded successfully.");
+        } else {
+             console.log("Sound already unloaded or not loaded.");
+        }
       } catch (e) {
           console.error("Error unloading sound:", e);
       } finally {
-           setSound(null); // Luôn set về null
+           soundRef.current = null; // Luôn set ref về null
       }
     }
     // Chỉ reset các state liên quan trực tiếp đến sound
@@ -118,11 +127,9 @@ export const useMusicPlayer = () => {
         setOriginalQueueOrder([]);
         setPlayedHistory([]);
      }
-  }, [sound]); // Phụ thuộc vào sound để biết có cần unload không
-
+  }, []); // Đã bỏ dependency [sound]
 
   // --- Hàm Phát nhạc Nội bộ (không expose ra ngoài) ---
-  // Hàm này giờ chỉ phát 1 bài, không quản lý queue
   const playTrackInternal = useCallback(async (track, localUri = null) => {
     if (!track || (!track.trackUrl && !localUri)) {
         Alert.alert('Lỗi', 'Thông tin bài hát không hợp lệ.');
@@ -165,7 +172,7 @@ export const useMusicPlayer = () => {
       );
       console.log("Sound loaded successfully");
 
-      setSound(newSound);
+      soundRef.current = newSound; // <--- CẬP NHẬT REF
       setCurrentTrack(track); // Cập nhật track *sau khi* load thành công
        return true; // Trả về true nếu thành công
 
@@ -181,7 +188,6 @@ export const useMusicPlayer = () => {
 
 
    // --- Hàm bắt đầu phát một danh sách (Queue) ---
-   // Hàm này sẽ được gọi từ các màn hình
    const playQueue = useCallback(async (tracksList, startIndex = 0) => {
        if (!tracksList || tracksList.length === 0 || startIndex < 0 || startIndex >= tracksList.length) {
             console.error("Invalid track list or start index for playQueue");
@@ -232,35 +238,50 @@ export const useMusicPlayer = () => {
        const localUri = downloaded[initialTrack.id.toString()];
        await playTrackInternal(initialTrack, localUri); // Gọi hàm phát nội bộ
 
-   }, [shuffle, playTrackInternal]); // Phụ thuộc vào shuffle và playTrackInternal
+   }, [shuffle, playTrackInternal]);
 
 
-  // --- Play/Pause ---
+  // --- Play/Pause (ĐÃ SỬA) ---
   const togglePlayPause = useCallback(async () => {
-      if (!sound) return;
+      const localSound = soundRef.current; // Lấy từ ref
+      if (!localSound) return;
       try {
-          const status = await sound.getStatusAsync();
+          const status = await localSound.getStatusAsync(); // Dùng localSound
           if (!status.isLoaded) return;
           if (status.isPlaying) {
-              await sound.pauseAsync();
+              await localSound.pauseAsync();
               console.log("Paused track");
           } else {
               // Nếu đã hết bài và không lặp lại -> tua về đầu trước khi phát
               if (status.didJustFinish && repeatMode !== 'one') {
                    console.log("Replaying finished track from beginning");
-                  await sound.setPositionAsync(0);
-                  await sound.playAsync();
+                  await localSound.setPositionAsync(0);
+                  await localSound.playAsync();
               } else {
                   // Nếu đang pause hoặc repeat one -> chỉ cần play
                    console.log("Playing track");
-                  await sound.playAsync();
+                  await localSound.playAsync();
               }
           }
       } catch (error) {
           console.error("Error toggling Play/Pause:", error);
       }
-  }, [sound, repeatMode]); // Thêm repeatMode
+  }, [repeatMode]); // Bỏ sound khỏi dependencies
 
+  // --- Seek (ĐÃ SỬA) ---
+  const seekTo = useCallback(async (positionMillis) => {
+      const localSound = soundRef.current; // Lấy từ ref
+      if (!localSound) return; 
+      try { 
+          isSeeking.current = true; 
+          await localSound.setPositionAsync(positionMillis); // Dùng localSound
+          setPosition(positionMillis); 
+      } catch (e) { 
+          console.error("Err seeking:", e); 
+      } finally { 
+          setTimeout(() => { isSeeking.current = false; }, 100); 
+      }
+  }, []); // Bỏ sound khỏi dependencies
 
   // --- Hàm tìm và phát bài hát tiếp theo/trước đó trong queue ---
    const playNextTrackInQueue = useCallback(async (direction = 'next') => {
@@ -377,28 +398,7 @@ export const useMusicPlayer = () => {
             }
        }
 
-   }, [currentTrack, currentQueue, originalQueueOrder, playedHistory, shuffle, repeatMode, playTrackInternal, seekTo, sound, cleanup]); // Thêm cleanup
-
-
-   // --- Xử lý kết thúc bài hát (Đơn giản hóa) ---
-   const handleTrackEnd = useCallback(async () => {
-    // isLooping (cho repeat one) đã được xử lý bởi onPlaybackStatusUpdate
-    // Chỉ cần gọi playNextTrackInQueue cho repeat all và shuffle
-    if (repeatMode === 'all' || shuffle) {
-        await playNextTrackInQueue('next');
-    } else { // repeatMode === 'none'
-        console.log("Track ended. Repeat mode none.");
-        setIsPlaying(false);
-        setCurrentLyricIndex(-1); // Reset lyric
-        if (sound) {
-           try {
-             await sound.pauseAsync(); // Chỉ cần pause
-             await sound.setPositionAsync(0); // và tua về đầu
-             setPosition(0);
-           } catch(e) { console.error("Error resetting position after end:", e); }
-        }
-    }
-  }, [repeatMode, shuffle, sound, playNextTrackInQueue]); // Phụ thuộc vào playNextTrackInQueue
+   }, [currentTrack, currentQueue, originalQueueOrder, playedHistory, shuffle, repeatMode, playTrackInternal, seekTo, cleanup]); // Đã bỏ sound khỏi dependencies
 
 
   // --- Next (Gọi hàm nội bộ) ---
@@ -409,25 +409,19 @@ export const useMusicPlayer = () => {
   // --- Previous (Gọi hàm nội bộ hoặc seek) ---
   const skipToPrevious = useCallback(async () => {
      if (isLoading || !currentTrack) return;
-     const status = await sound?.getStatusAsync();
+     const localSound = soundRef.current; // Lấy từ ref
+     const status = await localSound?.getStatusAsync();
      // Tua về đầu nếu > 3 giây hoặc đang shuffle và là bài đầu tiên trong history
      if (status?.isLoaded && (status.positionMillis > 3000 || (shuffle && playedHistory.length <= 1))) {
          console.log("Seeking to beginning of current track (Previous action)");
          await seekTo(0);
-         if (!status.isPlaying) await sound?.playAsync();
+         if (!status.isPlaying) await localSound?.playAsync(); // Dùng localSound
      } else {
          await playNextTrackInQueue('prev'); // Gọi hàm nội bộ để tìm bài trước
      }
-  }, [isLoading, currentTrack, sound, seekTo, playNextTrackInQueue, shuffle, playedHistory.length]); // Thêm shuffle, playedHistory.length
+  }, [isLoading, currentTrack, seekTo, playNextTrackInQueue, shuffle, playedHistory.length]); // Đã bỏ sound khỏi dependencies
 
-
-  // --- Seek (Giữ nguyên) ---
-  const seekTo = useCallback(async (positionMillis) => {
-      if (!sound) return; try { isSeeking.current = true; await sound.setPositionAsync(positionMillis); setPosition(positionMillis); } catch (e) { console.error("Err seeking:", e); } finally { setTimeout(() => { isSeeking.current = false; }, 100); }
-  }, [sound]);
-
-
-  // --- Cycle Repeat Mode ---
+  // --- Cycle Repeat Mode (ĐÃ SỬA) ---
   const cycleRepeatMode = useCallback(() => {
     setRepeatMode(prevMode => {
       let newMode = 'none';
@@ -435,12 +429,12 @@ export const useMusicPlayer = () => {
       else if (prevMode === 'all') newMode = 'one';
       
       // Cập nhật isLooping của sound hiện tại
-      sound?.setIsLoopingAsync(newMode === 'one').catch(e => console.error("Error setting looping:", e));
+      soundRef.current?.setIsLoopingAsync(newMode === 'one').catch(e => console.error("Error setting looping:", e)); // Dùng soundRef.current
       console.log("Repeat mode changed to:", newMode);
       // TODO: Gọi API lưu trạng thái nếu cần
       return newMode;
     });
-  }, [sound]);
+  }, []); // Đã bỏ dependency [sound]
 
    // --- Toggle Shuffle ---
    const toggleShuffleCallback = useCallback(() => {
@@ -490,6 +484,28 @@ export const useMusicPlayer = () => {
    }, [originalQueueOrder, currentTrack]);
 
 
+  // --- Xử lý kết thúc bài hát (Đơn giản hóa) ---
+   const handleTrackEnd = useCallback(async () => {
+    // isLooping (cho repeat one) đã được xử lý bởi onPlaybackStatusUpdate
+    // Chỉ cần gọi playNextTrackInQueue cho repeat all và shuffle
+    if (repeatMode === 'all' || shuffle) {
+        await playNextTrackInQueue('next');
+    } else { // repeatMode === 'none'
+        console.log("Track ended. Repeat mode none.");
+        setIsPlaying(false);
+        setCurrentLyricIndex(-1); // Reset lyric
+        const localSound = soundRef.current;
+        if (localSound) {
+           try {
+             await localSound.pauseAsync(); // Chỉ cần pause
+             await localSound.setPositionAsync(0); // và tua về đầu
+             setPosition(0);
+           } catch(e) { console.error("Error resetting position after end:", e); }
+        }
+    }
+  }, [repeatMode, shuffle, playNextTrackInQueue]); // Đã bỏ sound khỏi dependencies
+
+
   // --- Effect lắng nghe AppState ---
   useEffect(() => {
     // Hàm xử lý khi AppState thay đổi
@@ -519,9 +535,7 @@ export const useMusicPlayer = () => {
   }, []); // Mảng dependency rỗng `[]` -> Chỉ chạy 1 lần khi hook mount và cleanup khi unmount
 
   // --- Effect dọn dẹp chính khi unmount ---
-  // Hook này đảm bảo sound được giải phóng khi component dùng hook này bị hủy
   useEffect(() => {
-    // Trả về hàm cleanup đã được định nghĩa bằng useCallback
     return () => {
       console.log("MusicPlayer hook unmounting. Cleaning up sound and state...");
       cleanup(true); // Gọi cleanup với resetPlayerState = true
@@ -529,7 +543,8 @@ export const useMusicPlayer = () => {
   }, [cleanup]); // Phụ thuộc vào hàm cleanup (để nếu cleanup thay đổi thì effect cập nhật)
 
   return {
-    sound, currentTrack, isPlaying, isLoading, duration, position,
+    sound: soundRef.current, // <--- TRẢ VỀ REF.CURRENT
+    currentTrack, isPlaying, isLoading, duration, position,
     repeatMode, shuffle, volume, lyrics, currentLyricIndex, userId,
     playQueue, // Expose hàm bắt đầu queue mới
     // playTrack: playTrackInternal, // Chỉ expose playQueue? Hay cả play đơn lẻ? Tạm thời ẩn playTrackInternal
@@ -540,7 +555,7 @@ export const useMusicPlayer = () => {
         // Giới hạn giá trị vol từ 0 đến 1
         const clampedVol = Math.max(0, Math.min(1, vol));
         setVolume(clampedVol);
-        sound?.setVolumeAsync(clampedVol).catch(e => console.error("Error setting volume:", e)); // Thêm catch
+        soundRef.current?.setVolumeAsync(clampedVol).catch(e => console.error("Error setting volume:", e)); // Dùng soundRef.current
     },
   };
 };
