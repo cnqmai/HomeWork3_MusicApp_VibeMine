@@ -1,26 +1,30 @@
 package com.vibemine.musicapp.controller;
 
+import com.vibemine.musicapp.dto.AlbumDTO;
+import com.vibemine.musicapp.dto.TrackResponseDTO;
+import com.vibemine.musicapp.service.AlbumService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.vibemine.musicapp.model.Album;
-import com.vibemine.musicapp.service.AlbumService;
-
 @RestController
-@RequestMapping("/api/albums")
+@RequestMapping("/api/v1/albums")
+@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class AlbumController {
-
     private final AlbumService albumService;
 
-    public AlbumController(AlbumService albumService) {
-        this.albumService = albumService;
+    // FR-6.4: Chi tiết Album
+    @GetMapping("/{id}")
+    public ResponseEntity<AlbumDTO> getAlbum(@PathVariable Long id) {
+        return ResponseEntity.ok(albumService.getAlbum(id));
     }
 
-    @GetMapping
-    public List<Album> getAllAlbums() {
-        return albumService.getAllAlbums();
+    // FR-6.4: Tracks của Album
+    @GetMapping("/{id}/tracks")
+    public ResponseEntity<List<TrackResponseDTO>> getAlbumTracks(@PathVariable Long id) {
+        return ResponseEntity.ok(albumService.getAlbumTracks(id));
     }
 }

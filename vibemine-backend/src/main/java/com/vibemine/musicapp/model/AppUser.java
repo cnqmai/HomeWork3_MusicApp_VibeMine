@@ -6,12 +6,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "artist")
+@Table(name = "app_user")
 @Data @NoArgsConstructor @AllArgsConstructor
-public class Artist {
+public class AppUser {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String name;        // FR-1.2
-    private String bio;
-    private String avatarUrl;   // FR-1.2
+    private String username;
+    private String email;
+    private String password;
+    private String role;
 }

@@ -1,63 +1,43 @@
-import React, { useContext } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
+import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-// Import AuthContext
-import { AuthContext } from '../context/AuthContext';
-
-// Import các màn hình
-import LoginScreen from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
-import PlaylistsScreen from '../screens/PlaylistsScreen';
+import PlayerScreen from '../screens/PlayerScreen';
+import PlaylistScreen from '../screens/PlaylistScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
-import PlayerScreen from '../screens/PlayerScreen'; 
 
-const AuthStack = createNativeStackNavigator();
-const MainTab = createBottomTabNavigator();
-const RootStack = createNativeStackNavigator(); // Stack chính để chứa cả tab và màn hình Player
+const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
 
-// Tab Navigator cho các màn hình chính sau khi đăng nhập
-function MainAppTabs() {
-    return (
-        <MainTab.Navigator screenOptions={{ headerShown: false }}>
-            <MainTab.Screen name="Home" component={HomeScreen} />
-            <MainTab.Screen name="Playlists" component={PlaylistsScreen} />
-            <MainTab.Screen name="Favorites" component={FavoritesScreen} />
-            {/* Đã loại bỏ màn hình History khỏi thanh điều hướng chính */}
-        </MainTab.Navigator>
-    );
+function MainTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Home') iconName = 'home';
+          else if (route.name === 'Playlists') iconName = 'queue-music';
+          else if (route.name === 'Favorites') iconName = 'favorite';
+          return <Icon name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#FF6B6B',
+        tabBarInactiveTintColor: 'gray',
+      })}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Playlists" component={PlaylistScreen} />
+      <Tab.Screen name="Favorites" component={FavoritesScreen} />
+    </Tab.Navigator>
+  );
 }
 
-// Stack Navigator cho luồng xác thực
-function AuthFlow() {
-    return (
-        <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-            <AuthStack.Screen name="Login" component={LoginScreen} />
-            <AuthStack.Screen name="Register" component={RegisterScreen} />
-        </AuthStack.Navigator>
-    );
-}
-
-// Cấu trúc Navigator tổng
 export default function AppNavigator() {
-    const { userToken } = useContext(AuthContext); 
-
-    return (
-        <NavigationContainer>
-            <RootStack.Navigator screenOptions={{ headerShown: false }}>
-                {userToken == null ? (
-                    // Nếu chưa đăng nhập, hiển thị luồng xác thực
-                    <RootStack.Screen name="Auth" component={AuthFlow} />
-                ) : (
-                    <>
-                        <RootStack.Screen name="App" component={MainAppTabs} />
-                        {/* THÊM DÒNG NÀY ĐỂ ĐĂNG KÝ MÀN HÌNH PLAYER */}
-                        <RootStack.Screen name="Player" component={PlayerScreen} /> 
-                    </>
-                )}
-            </RootStack.Navigator>
-        </NavigationContainer>
-    );
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Main" component={MainTabs} />
+      <Stack.Screen name="Player" component={PlayerScreen} />
+    </Stack.Navigator>
+  );
 }

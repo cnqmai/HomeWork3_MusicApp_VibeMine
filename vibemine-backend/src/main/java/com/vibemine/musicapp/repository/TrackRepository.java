@@ -1,26 +1,24 @@
 package com.vibemine.musicapp.repository;
 
-import java.util.List;
-
+import com.vibemine.musicapp.model.Track;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import java.util.List;
 
-import com.vibemine.musicapp.model.Track;
-
-@Repository
 public interface TrackRepository extends JpaRepository<Track, Long> {
-
-    // Đảm bảo phương thức này tồn tại và đúng tên
-    // Tìm theo Title HOẶC tên Artist (quan hệ @ManyToMany)
-    List<Track> findByTitleContainingIgnoreCaseOrArtists_NameContainingIgnoreCase(String title, String artistName);
-
-    // Đảm bảo phương thức này tồn tại và đúng tên
-    List<Track> findByIsTrendingTrue(); // Có thể bạn cần phương thức này thay vì sắp xếp theo playCount ban đầu
-
-    // Đảm bảo phương thức này tồn tại và đúng tên
-    List<Track> findByGenreIgnoreCase(String genre);
-
-    // Đảm bảo phương thức này tồn tại và đúng tên (Dùng cho Trending)
+    // FR-1.3
+    List<Track> findByTitleContainingIgnoreCaseOrArtists_NameContainingIgnoreCase(
+        String title, String artistName);
+    
+    // FR-8.2
     List<Track> findAllByOrderByPlayCountDesc(Pageable pageable);
+    
+    // FR-6.4
+    List<Track> findByGenreIgnoreCase(String genre);
+    
+    // FR-6.4: Tracks theo Artist
+    List<Track> findByArtists_Id(Long artistId);
+    
+    // FR-6.4: Tracks theo Album  
+    List<Track> findByAlbum_Id(Long albumId);
 }

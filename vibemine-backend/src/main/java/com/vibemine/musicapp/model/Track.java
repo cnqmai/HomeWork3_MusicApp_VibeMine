@@ -1,50 +1,34 @@
-// src/main/java/com/vibemine/musicapp/model/Track.java
-
 package com.vibemine.musicapp.model;
 
-import java.util.List;
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 @Entity
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Table(name = "track")
+@Data @NoArgsConstructor @AllArgsConstructor
 public class Track {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    private String title;
     
-    @ManyToMany
-    @JoinTable(
-        name = "track_artists",
-        joinColumns = @JoinColumn(name = "track_id"),
-        inverseJoinColumns = @JoinColumn(name = "artist_id")
-    )
-    private List<Artist> artists;
-
-    @ManyToOne
-    @JoinColumn(name = "album_id")
-    private Album album;
-
+    private String title;           // FR-1.2
     private String genre;
-    private String coverArtUrl;
-    private String trackUrl;
-    private String lyrics;
-    private Long duration;
+    private String coverArtUrl;     // FR-1.2
+    private String trackUrl;        // FR-2.1
+    private String lyrics;          // FR-6.1
+    private Long duration;          // FR-2.4
+    private Long playCount = 0L;
+    private Long favoriteCount = 0L;
     private boolean isTrending;
-    private Long playCount = 0L; 
-    private Long favoriteCount = 0L; 
+
+    @ManyToMany
+    @JoinTable(name = "track_artists",
+        joinColumns = @JoinColumn(name = "track_id"),
+        inverseJoinColumns = @JoinColumn(name = "artist_id"))
+    private List<Artist> artists;   // FR-1.2
+
+    @ManyToOne @JoinColumn(name = "album_id")
+    private Album album;            // FR-6.4
 }
