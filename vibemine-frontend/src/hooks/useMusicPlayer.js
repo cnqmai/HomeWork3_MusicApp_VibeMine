@@ -89,7 +89,7 @@ export const useMusicPlayer = () => {
     if (status.didJustFinish && !status.isLooping) {
       handleTrackEnd();
     }
-  }, [lyrics, isSeeking.current, repeatMode]); // Bỏ handleTrackEnd khỏi dependency
+  }, [lyrics, isSeeking.current, repeatMode]);
 
    // --- Dọn dẹp (ĐÃ SỬA LỖI) ---
    const cleanup = useCallback(async (resetPlayerState = true) => {
@@ -127,7 +127,7 @@ export const useMusicPlayer = () => {
         setOriginalQueueOrder([]);
         setPlayedHistory([]);
      }
-  }, []); // Đã bỏ dependency [sound]
+  }, []);
 
   // --- Hàm Phát nhạc Nội bộ (không expose ra ngoài) ---
   const playTrackInternal = useCallback(async (track, localUri = null) => {
@@ -266,7 +266,7 @@ export const useMusicPlayer = () => {
       } catch (error) {
           console.error("Error toggling Play/Pause:", error);
       }
-  }, [repeatMode]); // Bỏ sound khỏi dependencies
+  }, [repeatMode]);
 
   // --- Seek (ĐÃ SỬA) ---
   const seekTo = useCallback(async (positionMillis) => {
@@ -281,7 +281,7 @@ export const useMusicPlayer = () => {
       } finally { 
           setTimeout(() => { isSeeking.current = false; }, 100); 
       }
-  }, []); // Bỏ sound khỏi dependencies
+  }, []);
 
   // --- Hàm tìm và phát bài hát tiếp theo/trước đó trong queue ---
    const playNextTrackInQueue = useCallback(async (direction = 'next') => {
@@ -368,7 +368,7 @@ export const useMusicPlayer = () => {
                        }
                    } else {
                         // Không tìm thấy index hiện tại? Tua về đầu
-                         console.log("Current track not found in queue? Seeking to 0.");
+                         console.log("Current track not found in queue? Tua về đầu.");
                         await seekTo(0);
                    }
                }
@@ -398,7 +398,7 @@ export const useMusicPlayer = () => {
             }
        }
 
-   }, [currentTrack, currentQueue, originalQueueOrder, playedHistory, shuffle, repeatMode, playTrackInternal, seekTo, cleanup]); // Đã bỏ sound khỏi dependencies
+   }, [currentTrack, currentQueue, originalQueueOrder, playedHistory, shuffle, repeatMode, playTrackInternal, seekTo, cleanup]);
 
 
   // --- Next (Gọi hàm nội bộ) ---
@@ -419,7 +419,7 @@ export const useMusicPlayer = () => {
      } else {
          await playNextTrackInQueue('prev'); // Gọi hàm nội bộ để tìm bài trước
      }
-  }, [isLoading, currentTrack, seekTo, playNextTrackInQueue, shuffle, playedHistory.length]); // Đã bỏ sound khỏi dependencies
+  }, [isLoading, currentTrack, seekTo, playNextTrackInQueue, shuffle, playedHistory.length]);
 
   // --- Cycle Repeat Mode (ĐÃ SỬA) ---
   const cycleRepeatMode = useCallback(() => {
@@ -434,7 +434,7 @@ export const useMusicPlayer = () => {
       // TODO: Gọi API lưu trạng thái nếu cần
       return newMode;
     });
-  }, []); // Đã bỏ dependency [sound]
+  }, []);
 
    // --- Toggle Shuffle ---
    const toggleShuffleCallback = useCallback(() => {
@@ -503,7 +503,7 @@ export const useMusicPlayer = () => {
            } catch(e) { console.error("Error resetting position after end:", e); }
         }
     }
-  }, [repeatMode, shuffle, playNextTrackInQueue]); // Đã bỏ sound khỏi dependencies
+  }, [repeatMode, shuffle, playNextTrackInQueue]);
 
 
   // --- Effect lắng nghe AppState ---
@@ -532,7 +532,7 @@ export const useMusicPlayer = () => {
       console.log("Removing AppState listener."); // Log khi gỡ bỏ
       subscription.remove();
     };
-  }, []); // Mảng dependency rỗng `[]` -> Chỉ chạy 1 lần khi hook mount và cleanup khi unmount
+  }, []);
 
   // --- Effect dọn dẹp chính khi unmount ---
   useEffect(() => {
@@ -540,7 +540,7 @@ export const useMusicPlayer = () => {
       console.log("MusicPlayer hook unmounting. Cleaning up sound and state...");
       cleanup(true); // Gọi cleanup với resetPlayerState = true
     };
-  }, [cleanup]); // Phụ thuộc vào hàm cleanup (để nếu cleanup thay đổi thì effect cập nhật)
+  }, [cleanup]);
 
   return {
     sound: soundRef.current, // <--- TRẢ VỀ REF.CURRENT

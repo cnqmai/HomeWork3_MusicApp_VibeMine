@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import TrackItem from '../components/TrackItem';
 import api from '../api/api';
+import MiniPlayer from '../components/MiniPlayer';
 import { useMusicPlayer } from '../hooks/useMusicPlayer';
 import { storage } from '../utils/storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -190,6 +191,7 @@ export default function FavoritesScreen({ navigation }) {
           />
        )}
         {/* Tab Navigator quản lý MiniPlayer */}
+        <MiniPlayer navigation={navigation} />
     </SafeAreaView>
   );
 }
