@@ -1,6 +1,6 @@
 -- Dữ liệu mẫu cho bảng app_user
 INSERT INTO app_user (id, username, email, password, role) VALUES
-(1, 'maicnq', 'cnqmai@gmail.com', '$2a$10$8.UnVuG9HHgffUDAlk8qfeclM3eW5bL7GS6uVME/incQOMZgpEcL2', 'USER');
+(1, 'cnqmai', 'cnqmai@gmail.com', '$2a$10$8.UnVuG9HHgffUDAlk8qfeclM3eW5bL7GS6uVME/incQOMZgpEcL2', 'USER');
 
 -- Dữ liệu mẫu cho bảng artist (Không còn nghệ sĩ kết hợp)
 INSERT INTO artist (id, name, bio, avatar_url) VALUES

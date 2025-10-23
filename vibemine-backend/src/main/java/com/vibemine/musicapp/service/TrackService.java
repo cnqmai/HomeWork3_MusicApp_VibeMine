@@ -33,20 +33,22 @@ public class TrackService {
 
     public Optional<Track> getTrackById(Long id) {
         Optional<Track> track = trackRepository.findById(id);
+        // Tăng lượt nghe khi lấy chi tiết bài hát
         track.ifPresent(t -> {
             t.setPlayCount(t.getPlayCount() + 1);
             trackRepository.save(t);
         });
         return track;
     }
-    
+
     public List<Track> searchTracks(String keyword) {
         // SỬA LỖI: Đổi tên phương thức để khớp với Repository
         return trackRepository.findByTitleContainingIgnoreCaseOrArtists_NameContainingIgnoreCase(keyword, keyword);
     }
-    
+
     public List<Track> getTrendingTracks() {
-        Pageable topTen = PageRequest.of(0, 10); 
+        // Lấy 10 bài hát có lượt nghe cao nhất
+        Pageable topTen = PageRequest.of(0, 10);
         return trackRepository.findAllByOrderByPlayCountDesc(topTen);
     }
 
@@ -54,11 +56,15 @@ public class TrackService {
         return trackRepository.findByGenreIgnoreCase(genre);
     }
 
+    // Lấy thông tin Album kèm danh sách bài hát của album đó
     public Optional<Album> getAlbumWithTracks(Long albumId) {
+        // JpaRepository tự động fetch các track liên quan khi cần
         return albumRepository.findById(albumId);
     }
 
+    // Lấy thông tin Nghệ sĩ kèm danh sách bài hát của nghệ sĩ đó
     public Optional<Artist> getArtistWithTracks(Long artistId) {
+        // JpaRepository tự động fetch các track liên quan khi cần
         return artistRepository.findById(artistId);
     }
 }

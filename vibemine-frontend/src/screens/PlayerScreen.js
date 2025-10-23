@@ -12,7 +12,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider'; 
 import { PlayerContext } from '../context/PlayerContext'; // Import PlayerContext
-import { SafeAreaView } from "react-native-safe-area-context";
 
 // --- Hardcode màu sắc nếu chưa có file constants ---
 const BRAND_COLORS = {

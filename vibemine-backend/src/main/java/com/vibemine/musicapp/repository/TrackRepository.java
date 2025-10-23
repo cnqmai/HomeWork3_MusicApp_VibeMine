@@ -11,12 +11,16 @@ import com.vibemine.musicapp.model.Track;
 @Repository
 public interface TrackRepository extends JpaRepository<Track, Long> {
 
-    // SỬA LỖI: Đổi "Artist" thành "Artists" để khớp với Model
+    // Đảm bảo phương thức này tồn tại và đúng tên
+    // Tìm theo Title HOẶC tên Artist (quan hệ @ManyToMany)
     List<Track> findByTitleContainingIgnoreCaseOrArtists_NameContainingIgnoreCase(String title, String artistName);
 
-    List<Track> findByIsTrendingTrue();
-    
+    // Đảm bảo phương thức này tồn tại và đúng tên
+    List<Track> findByIsTrendingTrue(); // Có thể bạn cần phương thức này thay vì sắp xếp theo playCount ban đầu
+
+    // Đảm bảo phương thức này tồn tại và đúng tên
     List<Track> findByGenreIgnoreCase(String genre);
 
+    // Đảm bảo phương thức này tồn tại và đúng tên (Dùng cho Trending)
     List<Track> findAllByOrderByPlayCountDesc(Pageable pageable);
 }

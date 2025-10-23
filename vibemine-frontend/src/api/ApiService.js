@@ -1,9 +1,8 @@
 import axios from 'axios';
 
 // !! QUAN TRỌNG: Thay thế địa chỉ IP này bằng địa chỉ IP của máy tính đang chạy backend.
-// Ví dụ: 'http://192.168.1.10:8080'
 // Để tìm IP, mở Command Prompt/Terminal và gõ "ipconfig" (Windows) hoặc "ifconfig" (macOS).
-const API_URL = 'http://172.20.10.2:8080'; 
+const API_URL = 'http://172.20.10.2:8080';
 
 // Set a sensible default timeout for all requests (ms)
 axios.defaults.timeout = 10000; // 10 seconds
@@ -27,6 +26,10 @@ const ApiService = {
   getAllTracks: () => {
     return axios.get(`${API_URL}/api/track`);
   },
+  // THÊM HÀM NÀY
+  searchTracks: (keyword) => {
+    return axios.get(`${API_URL}/api/track/search`, { params: { keyword } });
+  },
 
   // --- ALBUMS ---
   getAllAlbums: () => {
@@ -42,7 +45,7 @@ const ApiService = {
   getFavorites: (userId) => {
     return axios.get(`${API_URL}/api/user/${userId}/favorites`);
   },
-  
+
   // Các hàm gọi API khác sẽ được thêm vào đây...
 };
 

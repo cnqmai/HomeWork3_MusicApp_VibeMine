@@ -2,14 +2,19 @@
 
 package com.vibemine.musicapp.controller;
 
-import com.vibemine.musicapp.model.Track;
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.vibemine.musicapp.model.Album;
 import com.vibemine.musicapp.model.Artist;
+import com.vibemine.musicapp.model.Track;
 import com.vibemine.musicapp.service.TrackService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/track")
@@ -46,7 +51,7 @@ public class TrackController {
     public List<Track> searchTracks(@RequestParam String keyword) {
         return trackService.searchTracks(keyword);
     }
-    
+
     /**
      * Lấy danh sách nhạc xu hướng (FR-8.2)
      */
