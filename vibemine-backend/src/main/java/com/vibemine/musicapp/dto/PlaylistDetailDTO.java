@@ -2,12 +2,12 @@ package com.vibemine.musicapp.dto;
 
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
-public class PlaylistDTO {
+public class PlaylistDetailDTO {
     private Long id;
     private String name;
-    private Long userId;
     private LocalDateTime createdAt;
-    private Integer trackCount;
+    private List<TrackResponseDTO> tracks;
 }

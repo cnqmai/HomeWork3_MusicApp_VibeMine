@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,11 +20,34 @@ public class PlaylistService {
     private final TrackRepository trackRepository;
     private final TrackService trackService;
 
+    // ✅ FR-3.4: Lấy playlists của user
     public List<PlaylistDTO> getUserPlaylists(Long userId) {
         return playlistRepository.findByUserId(userId)
-            .stream().map(this::toDTO).collect(Collectors.toList());
+                .stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
+    // ✅ FR-3.4: Chi tiết playlist (với tracks)
+    public PlaylistDetailDTO getPlaylistDetail(Long playlistId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new RuntimeException("Playlist not found"));
+        
+        PlaylistDetailDTO dto = new PlaylistDetailDTO();
+        dto.setId(playlist.getId());
+        dto.setName(playlist.getName());
+        dto.setCreatedAt(playlist.getCreatedAt());
+        
+        // ✅ Convert tracks to TrackResponseDTO
+        List<TrackResponseDTO> trackDTOs = playlist.getTracks().stream()
+                .map(trackService::toResponseDTO)
+                .collect(Collectors.toList());
+        dto.setTracks(trackDTOs);
+        
+        return dto;
+    }
+
+    // ✅ FR-3.2: Tạo playlist mới
     @Transactional
     public PlaylistDTO createPlaylist(Long userId, CreatePlaylistRequest request) {
         Playlist playlist = new Playlist();
@@ -36,38 +58,42 @@ public class PlaylistService {
         return toDTO(playlist);
     }
 
+    // ✅ FR-3.3: Thêm track vào playlist
     @Transactional
     public PlaylistDTO addTrackToPlaylist(Long playlistId, Long trackId) {
         Playlist playlist = playlistRepository.findById(playlistId)
-            .orElseThrow(() -> new RuntimeException("Playlist not found"));
+                .orElseThrow(() -> new RuntimeException("Playlist not found"));
         Track track = trackRepository.findById(trackId)
-            .orElseThrow(() -> new RuntimeException("Track not found"));
-        playlist.getTracks().add(track);
+                .orElseThrow(() -> new RuntimeException("Track not found"));
+        
+        // Kiểm tra track đã có chưa
+        if (!playlist.getTracks().contains(track)) {
+            playlist.getTracks().add(track);
+            playlistRepository.save(playlist);
+        }
+        
+        return toDTO(playlist);
+    }
+
+    // ✅ FR-3.3: Xóa track khỏi playlist
+    @Transactional
+    public PlaylistDTO removeTrackFromPlaylist(Long playlistId, Long trackId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new RuntimeException("Playlist not found"));
+        
+        playlist.getTracks().removeIf(t -> t.getId().equals(trackId));
         playlistRepository.save(playlist);
         return toDTO(playlist);
     }
 
-    @Transactional
-    public void removeTrackFromPlaylist(Long playlistId, Long trackId) {
-        Playlist playlist = playlistRepository.findById(playlistId)
-            .orElseThrow(() -> new RuntimeException("Playlist not found"));
-        playlist.getTracks().removeIf(t -> t.getId().equals(trackId));
-        playlistRepository.save(playlist);
-    }
-
-    // ✅ SỬA LỖI: Trả PlaylistDTO trực tiếp
-    public PlaylistDTO getPlaylistDetail(Long playlistId) {
-        return playlistRepository.findById(playlistId)
-            .map(this::toDTO)
-            .orElse(null);
-    }
-
+    // ✅ PRIVATE: Convert to DTO
     private PlaylistDTO toDTO(Playlist playlist) {
         PlaylistDTO dto = new PlaylistDTO();
         dto.setId(playlist.getId());
         dto.setName(playlist.getName());
         dto.setUserId(playlist.getUserId());
         dto.setCreatedAt(playlist.getCreatedAt());
+        dto.setTrackCount(playlist.getTracks().size());
         return dto;
     }
 }

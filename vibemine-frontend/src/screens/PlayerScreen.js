@@ -7,89 +7,173 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import { Audio } from 'expo-av';
-import Slider from '@react-native-community/slider';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import useMusicPlayer from '../hooks/useMusicPlayer';
+import { Slider } from '@react-native-community/slider';
+import { Ionicons } from '@expo/vector-icons';
+import { useMusicPlayer } from '../hooks/useMusicPlayer';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default function PlayerScreen() {
-  const route = useRoute();
-  const navigation = useNavigation();
-  const { 
-    currentTrack, 
-    isPlaying, 
-    position, 
-    duration, 
-    onPlaybackStatusUpdate,
-    handlePlayPause,
-    handleNext,
-    handlePrevious,
-    handleSliderChange,
+  const {
+    currentTrack,
+    isPlaying,
+    isLoading,
+    duration,
+    position,
+    togglePlayPause,
+    skipToNext,
+    skipToPrevious,
+    seekTo,
+    setRepeatMode,
+    toggleShuffle,
+    setVolume,
   } = useMusicPlayer();
 
-  const track = currentTrack || route.params?.track;
+  if (!currentTrack) return null;
 
-  React.useEffect(() => {
-    if (track) {
-      loadTrack(track);
-    }
-  }, [track]);
-
-  const loadTrack = async (track) => {
-    const { sound } = await Audio.Sound.createAsync(
-      { uri: track.trackUrl },
-      { shouldPlay: true }
-    );
-    // Set sound to player hook
-  };
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const formatTime = (milliseconds) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   return (
     <View style={styles.container}>
-      <Image source={{ uri: track?.coverArtUrl }} style={styles.coverArt} />
-      
-      <Text style={styles.title}>{track?.title}</Text>
+      {/* Cover Art */}
+      <Image source={{ uri: currentTrack.coverArtUrl }} style={styles.coverArt} />
+
+      {/* Track Info */}
+      <Text style={styles.title}>{currentTrack.title}</Text>
       <Text style={styles.artist}>
-        {track?.artists?.map(a => a.name).join(', ')}
+        {currentTrack.artists?.map(a => a.name).join(', ') || 'Unknown Artist'}
       </Text>
 
+      {/* FR-2.3: Progress Bar */}
       <Slider
-        style={styles.progress}
+        style={styles.progressBar}
         minimumValue={0}
-        maximumValue={duration || 1}
-        value={position || 0}
-        minimumTrackTintColor="#FF6B6B"
-        maximumTrackTintColor="#333"
-        thumbTintColor="#FF6B6B"
-        onSlidingComplete={handleSliderChange}
+        maximumValue={duration}
+        value={position}
+        minimumTrackTintColor="#9C27B0"
+        maximumTrackTintColor="#ddd"
+        thumbTintColor="#9C27B0"
+        onSlidingComplete={seekTo}
+        disabled={isLoading}
       />
 
+      {/* FR-2.4: Thời gian */}
       <View style={styles.timeContainer}>
-        <Text style={styles.time}>{formatTime(position || 0)}</Text>
-        <Text style={styles.time}>{formatTime(duration || 0)}</Text>
+        <Text style={styles.time}>{formatTime(position)}</Text>
+        <Text style={styles.time}>{formatTime(duration)}</Text>
       </View>
 
+      {/* FR-2.1, FR-2.2: Controls */}
       <View style={styles.controls}>
-        <TouchableOpacity onPress={handlePrevious}>
-          <Icon name="skip-previous" size={40} color="white" />
+        <TouchableOpacity onPress={skipToPrevious} style={styles.controlButton}>
+          <Ionicons name="play-skip-back" size={32} color="#fff" />
         </TouchableOpacity>
-        
-        <TouchableOpacity onPress={handlePlayPause} style={styles.playButton}>
-          <Icon name={isPlaying ? 'pause' : 'play-arrow'} size={60} color="white" />
+
+        <TouchableOpacity 
+          onPress={togglePlayPause} 
+          style={[styles.playButton, isLoading && styles.disabled]}
+          disabled={isLoading}
+        >
+          <Ionicons 
+            name={isLoading ? "hourglass" : isPlaying ? "pause" : "play"} 
+            size={48} 
+            color="#fff" 
+          />
         </TouchableOpacity>
-        
-        <TouchableOpacity onPress={handleNext}>
-          <Icon name="skip-next" size={40} color="white" />
+
+        <TouchableOpacity onPress={skipToNext} style={styles.controlButton}>
+          <Ionicons name="play-skip-forward" size={32} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* FR-7: Player Options */}
+      <View style={styles.options}>
+        <TouchableOpacity style={styles.optionButton}>
+          <Ionicons name="repeat-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.optionButton} onPress={toggleShuffle}>
+          <Ionicons name="shuffle-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.optionButton}>
+          <Ionicons name="volume-high-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+    alignItems: 'center',
+    paddingTop: 60,
+  },
+  coverArt: {
+    width: 300,
+    height: 300,
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  artist: {
+    fontSize: 18,
+    color: '#ccc',
+    marginBottom: 32,
+  },
+  progressBar: {
+    width: width * 0.85,
+    height: 40,
+    marginBottom: 8,
+  },
+  timeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: width * 0.85,
+    marginBottom: 40,
+  },
+  time: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  controlButton: {
+    padding: 16,
+  },
+  playButton: {
+    backgroundColor: '#9C27B0',
+    borderRadius: 40,
+    marginHorizontal: 24,
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabled: {
+    opacity: 0.5,
+  },
+  options: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: width * 0.8,
+  },
+  optionButton: {
+    padding: 12,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+});
