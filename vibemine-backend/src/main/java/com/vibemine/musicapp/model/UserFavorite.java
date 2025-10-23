@@ -14,6 +14,6 @@ public class UserFavorite {
     @Id private Long userId;
     @Id private Long trackId;
 
-    @Column(name = "added_at") // <-- THÊM DÒNG NÀY
+    @Column(name = "added_at")
     private LocalDateTime addedAt;
 }
