@@ -16,6 +16,16 @@ import java.util.List;
 public class ArtistController {
     private final ArtistService artistService;
 
+    // --- THÊM MỚI (ĐẶT BÊN TRONG CLASS) ---
+    // Lấy tất cả artists (để duyệt trên HomeScreen)
+    @GetMapping
+    public ResponseEntity<List<ArtistDTO>> getAllArtists(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) { // Lấy 10 nghệ sĩ
+        return ResponseEntity.ok(artistService.getAllArtists(page, size));
+    }
+    // --- KẾT THÚC THÊM MỚI ---
+
     // FR-6.4: Chi tiết Artist
     @GetMapping("/{id}")
     public ResponseEntity<ArtistDTO> getArtist(@PathVariable Long id) {

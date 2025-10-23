@@ -16,6 +16,16 @@ import java.util.List;
 public class AlbumController {
     private final AlbumService albumService;
 
+    // --- THÊM MỚI ---
+    // Lấy tất cả album (để duyệt trên HomeScreen)
+    @GetMapping
+    public ResponseEntity<List<AlbumDTO>> getAllAlbums(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(albumService.getAllAlbums(page, size));
+    }
+    // --- KẾT THÚC THÊM MỚI ---
+
     // FR-6.4: Chi tiết Album
     @GetMapping("/{id}")
     public ResponseEntity<AlbumDTO> getAlbum(@PathVariable Long id) {

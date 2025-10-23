@@ -6,6 +6,8 @@ import com.vibemine.musicapp.model.Artist;
 import com.vibemine.musicapp.repository.ArtistRepository;
 import com.vibemine.musicapp.repository.TrackRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest; // Thêm import
+import org.springframework.data.domain.Pageable; // Thêm import
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,11 +20,21 @@ public class ArtistService {
     private final TrackRepository trackRepository;
     private final TrackService trackService;
 
+    // --- THÊM MỚI ---
+    // Lấy tất cả artists (phân trang)
+    public List<ArtistDTO> getAllArtists(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return artistRepository.findAll(pageable).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+    // --- KẾT THÚC THÊM MỚI ---
+
     // FR-6.4: Lấy thông tin Artist
     public ArtistDTO getArtist(Long artistId) {
         return artistRepository.findById(artistId)
                 .map(this::toDTO)
-                .orElse(null);
+                .orElse(null); // Trả về null nếu không tìm thấy
     }
 
     // FR-6.4: Lấy danh sách tracks của Artist
@@ -41,7 +53,9 @@ public class ArtistService {
                 .collect(Collectors.toList());
     }
 
-    private ArtistDTO toDTO(Artist artist) {
+    // Hàm chuyển đổi (giữ nguyên, có thể để public nếu AlbumService cần)
+    public ArtistDTO toDTO(Artist artist) {
+        if (artist == null) return null;
         ArtistDTO dto = new ArtistDTO();
         dto.setId(artist.getId());
         dto.setName(artist.getName());

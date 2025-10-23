@@ -7,13 +7,13 @@ import {
   Dimensions,
   RefreshControl,
   ActivityIndicator,
-  TextInput, // Sử dụng TextInput cơ bản
+  TextInput,
   TouchableOpacity,
-  ScrollView, // Sử dụng ScrollView cho nội dung chính
-  Alert, // Thêm Alert
-  Platform, // Thêm Platform
+  ScrollView,
+  Alert,
+  Platform,
+  Image,
 } from 'react-native';
-// import { Searchbar } from 'react-native-paper'; // Bỏ comment nếu muốn dùng Searchbar của Paper
 import { Ionicons } from '@expo/vector-icons';
 import TrackItem from '../components/TrackItem';
 import MiniPlayer from '../components/MiniPlayer';
@@ -24,19 +24,22 @@ import { useFocusEffect } from '@react-navigation/native';
 import debounce from 'lodash.debounce';
 
 const { width } = Dimensions.get('window');
-const userId = 1; // Giả sử userId
 
-// Danh sách thể loại mẫu (có thể lấy từ API nếu backend hỗ trợ)
+// Danh sách thể loại mẫu
 const GENRES = ['Indie', 'V-Pop', 'Rap', 'R&B', 'Ballad', 'EDM', 'Acoustic'];
 
 export default function HomeScreen({ navigation }) {
-  const [tracks, setTracks] = useState([]);
+  const [tracks, setTracks] = useState([]); // Đổi tên: recommendations
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false); // Loading cho danh sách chính + tìm kiếm
-  const [isRefreshing, setIsRefreshing] = useState(false); // State riêng cho RefreshControl
+  const [loading, setLoading] = useState(false); // Loading cho "Gợi ý" / Search
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadingTrending, setLoadingTrending] = useState(false);
   const [trending, setTrending] = useState([]);
-  const { playTrack } = useMusicPlayer();
+  const [loadingAlbums, setLoadingAlbums] = useState(false);
+  const [albums, setAlbums] = useState([]);
+  const [loadingArtists, setLoadingArtists] = useState(false);
+  const [artists, setArtists] = useState([]);
+  const { playTrack, userId } = useMusicPlayer(); // Lấy userId từ hook
   const [downloadedTracksMap, setDownloadedTracksMap] = useState({});
 
   // --- Tải dữ liệu ---
@@ -46,36 +49,58 @@ export default function HomeScreen({ navigation }) {
     setDownloadedTracksMap(map);
   }, []);
 
-  const loadTracks = useCallback(async (showLoading = true) => {
-    // console.log("HomeScreen: Loading tracks...");
-    if (showLoading && tracks.length === 0) setLoading(true); // Chỉ hiện loading toàn màn hình lần đầu
+  // --- CẬP NHẬT (FR-8.1) ---
+  // Đổi tên: loadTracks -> loadRecommendations
+  const loadRecommendations = useCallback(async (showLoading = true) => {
+    console.log("HomeScreen: Loading recommendations...");
+    if (showLoading && tracks.length === 0) setLoading(true);
     try {
-      const { data } = await api.getTracks(); // Lấy toàn bộ
-      setTracks(data || []);
+      // Gọi API gợi ý
+      const { data } = await api.getRecommendations(userId);
+      setTracks(data || []); // Cập nhật state
     } catch (error) {
-      console.error('Load tracks error:', error);
-      if (showLoading) Alert.alert("Lỗi", "Không thể tải danh sách bài hát.");
+      console.error('Load recommendations error:', error);
+      if (showLoading) Alert.alert("Lỗi", "Không thể tải gợi ý cho bạn.");
     } finally {
       if (showLoading) setLoading(false);
     }
-  }, [tracks.length]);
+  }, [tracks.length, userId]); // Thêm userId
+  // --- KẾT THÚC CẬP NHẬT ---
 
   const loadTrending = useCallback(async () => {
-    // console.log("HomeScreen: Loading trending...");
     setLoadingTrending(true);
     try {
-      const { data } = await api.getTrending(5);
+      const { data } = await api.getTrending(10);
       setTrending(data || []);
     } catch (error) { console.error('Load trending error:', error); }
     finally { setLoadingTrending(false); }
   }, []);
 
+  const loadAlbums = useCallback(async () => {
+    setLoadingAlbums(true);
+    try {
+      const { data } = await api.getAlbums(0, 10);
+      setAlbums(data || []);
+    } catch (error) { console.error('Load albums error:', error); }
+    finally { setLoadingAlbums(false); }
+  }, []);
+
+  const loadArtists = useCallback(async () => {
+    setLoadingArtists(true);
+    try {
+      const { data } = await api.getArtists(0, 10);
+      setArtists(data || []);
+    } catch (error) { console.error('Load artists error:', error); }
+    finally { setLoadingArtists(false); }
+  }, []);
+
   // --- Tìm kiếm ---
   const performSearch = useCallback(async (query) => {
-    // console.log(`HomeScreen: Performing search for "${query}"`);
-    setLoading(true); // Luôn set loading khi search
+    console.log(`HomeScreen: Performing search for "${query}"`);
+    setLoading(true);
     try {
-      const { data } = await api.searchTracks(query);
+      // Sửa: Gọi api.searchTracks với 3 tham số
+      const { data } = await api.searchTracks(query, 0, 50); 
       setTracks(data || []);
     } catch (error) {
       console.error('Search error:', error);
@@ -91,42 +116,46 @@ export default function HomeScreen({ navigation }) {
     if (trimmedQuery.length > 0) {
       debouncedSearch(trimmedQuery);
     } else if (trimmedQuery.length === 0 && query.length === 0) {
-      // console.log("HomeScreen: Search cleared, loading initial tracks.");
-      loadTracks(false); // Load lại không hiển thị loading toàn màn hình
+      console.log("HomeScreen: Search cleared, loading recommendations.");
+      loadRecommendations(false); // CẬP NHẬT: Load lại recommendations
     }
   };
 
   // --- Effects ---
   useEffect(() => {
-    loadTracks();
+    loadRecommendations(true); // CẬP NHẬT
     loadTrending();
-  }, []);
+    loadAlbums();
+    loadArtists();
+  }, []); // Bỏ dependencies để chỉ chạy 1 lần
 
   useFocusEffect(useCallback(() => {
-    // console.log("HomeScreen focused, reloading download statuses.");
     loadDownloadedStatus();
   }, [loadDownloadedStatus]));
 
-  // --- Điều hướng ---
+  // --- Điều hướng (Giữ nguyên) ---
   const navigateToGenre = (genreName) => {
-      navigation.navigate('CategoryTracks', {
-          type: 'genre',
-          name: genreName,
-      });
+      navigation.navigate('CategoryTracks', { type: 'genre', name: genreName });
+  };
+  const navigateToAlbum = (album) => {
+       navigation.navigate('CategoryTracks', { type: 'album', id: album.id, name: album.title });
+  };
+  const navigateToArtist = (artist) => {
+       navigation.navigate('CategoryTracks', { type: 'artist', id: artist.id, name: artist.name });
   };
 
+
   // --- Render ---
-  const renderTrack = ({ item, index }) => ( // Thêm index để dùng key
+  const renderTrack = ({ item, index }) => (
     <TrackItem
-      key={`track-${item.id}-${index}`} // Key unique hơn
+      key={`track-${item.id}-${index}`}
       track={item}
       onPress={(trackData, uri) => {
-        // console.log(`HomeScreen: Playing ${trackData.title}, localUri: ${uri}`);
         playTrack(trackData, uri);
         navigation.navigate('Player');
       }}
       onDownloadsChange={loadDownloadedStatus}
-      // isFavorite={...} // Add favorite logic here
+      // isFavorite={...}
       // onToggleFavorite={...}
     />
   );
@@ -140,28 +169,44 @@ export default function HomeScreen({ navigation }) {
      </TouchableOpacity>
    );
 
+   const renderAlbumItem = ({ item }) => (
+       <TouchableOpacity style={styles.cardItem} onPress={() => navigateToAlbum(item)}>
+           <Image source={{ uri: item.coverArtUrl || 'https://via.placeholder.com/150' }} style={styles.cardImage} />
+           <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+           <Text style={styles.cardSubtitle} numberOfLines={1}>{item.artist?.name || 'Nhiều nghệ sĩ'}</Text>
+       </TouchableOpacity>
+   );
+
+   const renderArtistItem = ({ item }) => (
+       <TouchableOpacity style={styles.cardItem} onPress={() => navigateToArtist(item)}>
+           <Image source={{ uri: item.avatarUrl || 'https://via.placeholder.com/150' }} style={[styles.cardImage, styles.artistImage]} />
+           <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
+       </TouchableOpacity>
+   );
+
   // Xử lý refresh
   const onRefresh = useCallback(async () => {
-    // console.log("HomeScreen: Refreshing..."); // Debug log
-    setIsRefreshing(true); // Bật indicator của RefreshControl
+    console.log("HomeScreen: Refreshing...");
+    setIsRefreshing(true);
     try {
-        // Tải lại đồng thời
         await Promise.all([
-            loadTracks(false), // Không bật loading toàn màn hình
+            loadRecommendations(false), // CẬP NHẬT
             loadTrending(),
+            loadAlbums(),
+            loadArtists(),
             loadDownloadedStatus()
         ]);
     } catch (error) {
          console.error("Error during refresh:", error);
-         // Có thể hiển thị thông báo lỗi nhỏ ở đây
+         Alert.alert("Lỗi", "Không thể làm mới dữ liệu.");
     } finally {
-        setIsRefreshing(false); // Tắt indicator
+        setIsRefreshing(false);
     }
-  }, [loadTracks, loadTrending, loadDownloadedStatus]);
+  }, [loadRecommendations, loadTrending, loadAlbums, loadArtists, loadDownloadedStatus]); // CẬP NHẬT
 
-  // --- Return JSX ---
+
+  // --- Return JSX (Đã sửa lỗi JSX) ---
   return (
-    // **** SỬA LỖI: BỌC TOÀN BỘ BẰNG VIEW ****
     <View style={styles.outerContainer}>
         <ScrollView
             style={styles.scrollView}
@@ -169,7 +214,7 @@ export default function HomeScreen({ navigation }) {
             refreshControl={
                 <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={["#9C27B0"]}/>
             }
-            keyboardShouldPersistTaps="handled" // Để có thể bấm nút khi bàn phím hiện
+            keyboardShouldPersistTaps="handled"
             >
             <TextInput
                 placeholder="Tìm kiếm bài hát, ca sĩ..."
@@ -190,11 +235,45 @@ export default function HomeScreen({ navigation }) {
                     keyExtractor={(item) => `trending-${item.id}`}
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.horizontalList}
+                    contentContainerStyle={styles.horizontalListTracks}
                 />
             ) : (
                 <Text style={styles.emptyTextSmall}>Không có dữ liệu trending.</Text>
             )}
+
+            {/* Artist Section */}
+            <Text style={styles.sectionTitle}>🎤 Nghệ Sĩ Nổi Bật</Text>
+            {loadingArtists ? (
+                 <ActivityIndicator style={styles.horizontalLoader} color="#9C27B0" />
+             ) : artists.length > 0 ? (
+                 <FlatList
+                    data={artists}
+                    renderItem={renderArtistItem}
+                    keyExtractor={(item) => `artist-${item.id}`}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.horizontalListCards}
+                 />
+             ) : (
+                  <Text style={styles.emptyTextSmall}>Không có dữ liệu nghệ sĩ.</Text>
+             )}
+
+            {/* Album Section */}
+            <Text style={styles.sectionTitle}>💽 Album Mới</Text>
+             {loadingAlbums ? (
+                 <ActivityIndicator style={styles.horizontalLoader} color="#9C27B0" />
+             ) : albums.length > 0 ? (
+                 <FlatList
+                    data={albums}
+                    renderItem={renderAlbumItem}
+                    keyExtractor={(item) => `album-${item.id}`}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.horizontalListCards}
+                 />
+             ) : (
+                  <Text style={styles.emptyTextSmall}>Không có dữ liệu album.</Text>
+             )}
 
             {/* Genre Section */}
             <Text style={styles.sectionTitle}>🎵 Thể loại</Text>
@@ -204,97 +283,97 @@ export default function HomeScreen({ navigation }) {
                 keyExtractor={(item) => `genre-${item}`}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalList} // Dùng chung style list ngang
+                contentContainerStyle={styles.horizontalListCards}
             />
 
-
-            {/* Main Track List Section */}
+            {/* Main Track List Section (CẬP NHẬT TIÊU ĐỀ) */}
             <Text style={styles.sectionTitle}>🎧 {searchQuery ? 'Kết quả tìm kiếm' : 'Gợi ý cho bạn'}</Text>
-            {loading && tracks.length === 0 ? ( // Loading lần đầu/tìm kiếm khi list rỗng
+            {loading && tracks.length === 0 ? (
                 <View style={styles.centerLoader}>
                     <ActivityIndicator size="large" color="#9C27B0" />
                 </View>
-            ) : tracks.length === 0 ? ( // List rỗng sau khi load xong
+            ) : tracks.length === 0 ? (
                 <Text style={styles.emptyText}>{searchQuery ? 'Không tìm thấy kết quả phù hợp.' : 'Không có bài hát nào.'}</Text>
             ): (
-                // Render danh sách tracks (dùng map)
                 <View style={styles.trackListContainer}>
-                    {tracks.map((item, index) => renderTrack({ item, index }))}
+                    {/* Sửa: Dùng `item.id` làm key */}
+                    {tracks.map((item, index) => renderTrack({ item, index, key: item.id }))}
                 </View>
             )}
-
-            {/* Khoảng trống dưới cùng để không bị che bởi MiniPlayer */}
-            {/* Đã chuyển vào contentContainerStyle của ScrollView */}
 
         </ScrollView>
 
         {/* Mini Player đặt ở đây, nằm trên ScrollView */}
         <MiniPlayer navigation={navigation} />
-    </View> // **** KẾT THÚC VIEW CHA ****
+    </View>
   );
 }
 
 // --- STYLES ---
 const styles = StyleSheet.create({
-  outerContainer: { // Style cho View cha bao bọc tất cả
+  outerContainer: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  scrollView: { // Style cho ScrollView
-    flex: 1, // Để ScrollView chiếm không gian còn lại (trên MiniPlayer)
+  scrollView: {
+    flex: 1,
   },
-  scrollViewContent: { // Style cho nội dung bên trong ScrollView
-     paddingBottom: 80, // Tăng padding bottom đủ cho MiniPlayer
+  scrollViewContent: {
+     paddingBottom: 80, // Khoảng trống cho MiniPlayer
   },
   searchBar: {
     marginHorizontal: 16,
-    marginTop: 15,
-    marginBottom: 10, // Tăng margin bottom
-    paddingHorizontal: 15,
+    marginTop: Platform.OS === 'ios' ? 10 : 15, // Chỉnh margin top
+    marginBottom: 10,
+    paddingHorizontal: 20, // Tăng padding
     paddingVertical: Platform.OS === 'ios' ? 12 : 9,
     backgroundColor: '#fff',
     borderRadius: 25,
-    fontSize: 16,
+    fontSize: 15, // Giảm font size
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    borderWidth: 1, // Thêm border nhẹ
+    borderWidth: 1,
     borderColor: '#eee',
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700', // Đậm hơn chút
+    fontSize: 20, // Tăng font size
+    fontWeight: 'bold', // Đậm hơn
     marginLeft: 16,
     marginTop: 20,
-    marginBottom: 10,
-    color: '#333',
+    marginBottom: 12, // Tăng margin bottom
+    color: '#222', // Màu đậm hơn
   },
-   horizontalLoader: { // Style cho loading indicator của list ngang
-     height: 100, // Chiều cao tạm thời để giữ layout
+   horizontalLoader: {
+     height: 150, // Tăng chiều cao loading
      justifyContent: 'center',
      alignItems: 'center',
    },
-  horizontalList: { // Style chung cho FlatList ngang
+  horizontalListTracks: {
     paddingLeft: 16,
-    paddingRight: 8, // Đủ để thấy item cuối
+    paddingRight: 8,
   },
-   // --- Genre Styles ---
-   genreList: { // Dùng chung horizontalList style
+   horizontalListCards: {
+    paddingLeft: 16,
+    paddingRight: 8,
+    paddingBottom: 5, // Thêm padding bottom
+  },
+   genreList: {
      paddingLeft: 16,
      paddingRight: 8,
      marginBottom: 10,
    },
    genreButton: {
-     backgroundColor: '#fff', // Nền trắng
+     backgroundColor: '#fff',
      paddingHorizontal: 18,
      paddingVertical: 10,
      borderRadius: 20,
      marginRight: 10,
-     borderWidth: 1, // Thêm border
+     borderWidth: 1,
      borderColor: '#ddd',
-     elevation: 1, // Thêm shadow nhẹ
+     elevation: 1,
      shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -303,14 +382,54 @@ const styles = StyleSheet.create({
    genreButtonText: {
      fontSize: 14,
      fontWeight: '500',
-     color: '#555', // Màu chữ đậm hơn
+     color: '#555',
+   },
+   // Card Styles for Album/Artist
+   cardItem: {
+     width: 140, // Tăng kích thước card
+     marginRight: 12,
+     backgroundColor: '#fff',
+     borderRadius: 8,
+     elevation: 2,
+     shadowColor: '#000',
+     shadowOffset: { width: 0, height: 1 },
+     shadowOpacity: 0.1,
+     shadowRadius: 3,
+     marginBottom: 5,
+   },
+   cardImage: {
+     width: 140,
+     height: 140, // Vuông
+     borderTopLeftRadius: 8,
+     borderTopRightRadius: 8,
+     backgroundColor: '#eee',
+   },
+   artistImage: {
+       borderRadius: 70, // Bo tròn (140 / 2)
+   },
+   cardTitle: {
+     fontSize: 14,
+     fontWeight: '600',
+     color: '#444',
+     paddingHorizontal: 8,
+     paddingTop: 8,
+     paddingBottom: 2,
+     textAlign: 'center',
+   },
+   cardSubtitle: {
+       fontSize: 12,
+       color: '#888',
+       textAlign: 'center',
+       paddingHorizontal: 8,
+       paddingBottom: 8,
    },
    // --- Track List Styles ---
    trackListContainer: {
-     paddingBottom: 5, // Không cần nhiều padding vì đã có ở ScrollView
+     paddingBottom: 5,
    },
   centerLoader: {
       marginTop: 50,
+      paddingBottom: 20,
       alignItems: 'center',
   },
   emptyText: {
@@ -324,6 +443,6 @@ const styles = StyleSheet.create({
        marginLeft: 16,
        fontSize: 14,
        color: '#888',
-       marginVertical: 10, // Thêm margin dọc
+       marginVertical: 10,
    },
 });
